@@ -1,0 +1,61 @@
+# Node dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+coverage/
+*.lcov
+
+# TypeScript cache
+*.tsbuildinfo
+
+# NestJS CLI output
+.nest-cli.json
+
+# Optional: if you use SQLite locally
+*.sqlite
+*.sqlite3
+
+# Optional: PM2 logs
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Optional: Docker
+docker-compose.override.yml
+docker-compose.dev.yml
+
+
+# Lock file (npm)
+package-lock.json
+
+# Misc
+*.tgz
