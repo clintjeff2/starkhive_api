@@ -11,7 +11,6 @@ async function bootstrap() {
   // Global prefix for all routes
   app.setGlobalPrefix('api/v1');
 
-  // Swagger setup
   const config = new DocumentBuilder()
     .setTitle('StarkHive API')
     .setDescription('API documentation for StarkHive')
