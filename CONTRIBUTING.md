@@ -52,3 +52,4 @@ To stay connected and up-to-date:
 ## 🙌 Thank You!
 
 We're building StarkHive together. Your contributions — big or small — make this project stronger for the Web3 dev community.
+
