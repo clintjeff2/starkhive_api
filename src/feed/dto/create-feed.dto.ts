@@ -1,1 +1,5 @@
-export class CreateFeedDto {}
+export class CreateFeedPostDto {
+  content: string;
+  imageUrl?: string;
+}
+
