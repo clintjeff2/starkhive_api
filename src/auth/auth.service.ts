@@ -43,9 +43,6 @@ export class AuthService {
       role: user.role,
     };
 
-    return this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET,
-      expiresIn: process.env.JWT_EXPIRATION || '1h',
-    });
+    return this.jwtService.sign(payload);
   }
 }
