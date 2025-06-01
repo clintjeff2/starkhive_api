@@ -4,9 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/entities/user.entity';
 import { FeedModule } from './feed/feed.module';
-import { UsersModule } from './users/users.module';
 import { PostModule } from './post/post.module';
 import * as dotenv from 'dotenv';
+import { SavedPost } from './feed/entities/savedpost.entity';
+import { Post } from './post/entities/post.entity';
 dotenv.config(); 
 
 @Module({
@@ -26,13 +27,12 @@ dotenv.config();
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User],
+        entities: [User, SavedPost, Post],
         synchronize: true, 
       }),
     }),
     AuthModule,
     FeedModule,
-    UsersModule,
     PostModule,
   ],
 })

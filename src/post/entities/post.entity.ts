@@ -1,5 +1,5 @@
 import { SavedPost } from 'src/feed/entities/savedpost.entity';
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne } from 'typeorm';
 
 @Entity()
 export class Post {
@@ -14,4 +14,5 @@ export class Post {
 
   @OneToMany(() => SavedPost, (savedPost) => savedPost.post)
   savedBy: SavedPost[];
+
 }

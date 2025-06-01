@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
 import { Post } from 'src/post/entities/post.entity';
+import { User } from 'src/auth/entities/user.entity';
 
 @Entity()
 export class SavedPost {
@@ -17,4 +17,5 @@ export class SavedPost {
 
   @CreateDateColumn()
   createdAt: Date;
+
 }
