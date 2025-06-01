@@ -24,7 +24,12 @@ async function bootstrap() {
   const port = process.env.PORT ?? 5000;
   await app.listen(port);
   console.log(`StarkHive app listening on http://localhost:${port}/api/v1`);
-  console.log(`StarkHive Swagger docs available at http://localhost:${port}/api/docs`);
+  console.log(
+    `StarkHive Swagger docs available at http://localhost:${port}/api/docs`,
+  );
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('Failed to start application:', error);
+  process.exit(1);
+});

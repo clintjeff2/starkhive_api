@@ -7,8 +7,8 @@ import { User } from './auth/entities/user.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, 
-      envFilePath: '.env.development'
+      isGlobal: true,
+      envFilePath: '.env.development',
     }),
 
     TypeOrmModule.forRootAsync({
@@ -22,7 +22,7 @@ import { User } from './auth/entities/user.entity';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         entities: [User],
-        synchronize: true, 
+        synchronize: true,
       }),
     }),
     AuthModule,
