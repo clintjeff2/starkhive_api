@@ -8,6 +8,7 @@ import { PostModule } from './post/post.module';
 import * as dotenv from 'dotenv';
 import { SavedPost } from './feed/entities/savedpost.entity';
 import { Post } from './post/entities/post.entity';
+import { UserModule } from './user/user.module';
 import { MessagingModule } from './messaging/messaging.module';
 import { Application } from './applications/entities/application.entity';
 import { ApplicationsModule } from './applications/applications.module';
@@ -36,6 +37,7 @@ dotenv.config();
     AuthModule,
     FeedModule,
     PostModule,
+    UserModule,
     MessagingModule,
     ApplicationsModule,
   ],
