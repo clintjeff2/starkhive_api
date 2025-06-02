@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SavedPost } from './entities/saved-post.entity'; 
+import { SavedPost } from './entities/savedpost.entity';
+import { CreateFeedDto } from './dto/create-feed.dto';
+import { UpdateFeedDto } from './dto/update-feed.dto';
 
 @Injectable()
 export class FeedService {
@@ -25,7 +27,40 @@ export class FeedService {
     return { message: 'Post saved' };
   }
 
-  async getSavedPosts(userId: number): Promise<SavedPost[]> {
-    return this.savedPostRepo.find({ where: { userId } });
+  async getSavedPosts(userId: number, page = 1, limit = 10) {
+    const [savedPosts, total] = await this.savedPostRepo.findAndCount({
+      where: { user: { id: userId } },
+      relations: ['post'],
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      total,
+      page,
+      limit,
+      data: savedPosts.map((sp) => sp.post),
+    };
+  }
+
+  create(createFeedDto: CreateFeedDto) {
+    return 'This action adds a new feed';
+  }
+
+  findAll() {
+    return `This action returns all feed`;
+  }
+
+  findOne(id: number) {
+    return `This action returns a #${id} feed`;
+  }
+
+  update(id: number, updateFeedDto: UpdateFeedDto) {
+    return `This action updates a #${id} feed`;
+  }
+
+  remove(id: number) {
+    return `This action removes a #${id} feed`;
   }
 }
