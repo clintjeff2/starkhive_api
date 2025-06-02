@@ -49,4 +49,16 @@ export class AuthController {
   public async SignIn(@Body() signInDto: LogInDto) {
     return await this.authService.SignIn(signInDto);
   }
+
+  @Post('request-password-reset')
+async requestPasswordReset(@Body('email') email: string) {
+  return this.authService.sendPasswordResetEmail(email);
+}
+
+
+@Post('reset-password')
+async resetPassword(@Body() body: { token: string; newPassword: string }) {
+  return this.authService.resetPassword(body.token, body.newPassword);
+}
+
 }
