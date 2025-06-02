@@ -10,6 +10,7 @@ import { SavedPost } from './feed/entities/savedpost.entity';
 import { Post } from './post/entities/post.entity';
 import { UserModule } from './user/user.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { JobsModule } from './jobs/jobs.module';
 
 dotenv.config(); 
 
@@ -38,6 +39,7 @@ dotenv.config();
     PostModule,
     UserModule,
     MessagingModule,
+    JobsModule,
 
   ],
 })
