@@ -10,6 +10,7 @@ import {
   Req,
   Query,
   HttpStatus,
+  Request,
 } from '@nestjs/common';
 import { FeedService } from './feed.service';
 import { CreateFeedDto, GetSavedPostsDto } from './dto/create-feed.dto';
@@ -20,6 +21,12 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.strategy';
 @Controller('feed')
 export class FeedController {
   constructor(private readonly feedService: FeedService) {}
+
+  @Post(':postId/save-toggle')
+  toggleSave(@Param('postId') postId: number, @Request() req) {
+    // Simulate user.id = 1 if auth not ready
+    return this.feedService.toggleSavePost(+postId, req.user?.id ?? 1);
+  }
 
   @ApiBearerAuth('jwt-auth')
   @UseGuards(JwtAuthGuard)
