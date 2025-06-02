@@ -17,8 +17,8 @@ import {
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { ConnectWalletDto } from './dto/connect-wallet.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard'; // Assuming you have JWT guard
+import { JwtAuthGuard } from 'src/auth/guards/jwt.strategy';
+import { ConnectWalletDto } from './connect-wallet.dto';
 
 @ApiTags('Authentication & Wallet')
 @Controller('auth')

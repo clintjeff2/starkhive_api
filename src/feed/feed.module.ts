@@ -1,8 +1,10 @@
-import { Module, Post } from '@nestjs/common';
+
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { FeedService } from './feed.service';
 import { FeedController } from './feed.controller';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { SavedPost } from './entities/savedpost.entity';
+import { Post } from '../post/entities/post.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([SavedPost, Post])],

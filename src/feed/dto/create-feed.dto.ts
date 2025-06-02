@@ -2,6 +2,13 @@ import { IsOptional, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
+// Keep this DTO for creating a feed post
+export class CreateFeedPostDto {
+  content: string;
+  imageUrl?: string;
+}
+
+// Keep this DTO for getting saved posts
 export class GetSavedPostsDto {
   @ApiProperty({
     description: 'Page number (1-indexed)',
@@ -29,4 +36,5 @@ export class GetSavedPostsDto {
   limit?: number = 10;
 }
 
+// This class is empty, but kept for compatibility if needed
 export class CreateFeedDto {}
