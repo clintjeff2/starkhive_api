@@ -8,6 +8,7 @@ import { PostModule } from './post/post.module';
 import * as dotenv from 'dotenv';
 import { SavedPost } from './feed/entities/savedpost.entity';
 import { Post } from './post/entities/post.entity';
+import { UserModule } from './user/user.module';
 dotenv.config(); 
 
 @Module({
@@ -33,6 +34,7 @@ dotenv.config();
     AuthModule,
     FeedModule,
     PostModule,
+    UserModule,
   ],
 })
 export class AppModule {}
