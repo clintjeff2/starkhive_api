@@ -14,7 +14,8 @@ export class FeedService {
 
   async toggleSavePost(postId: number, userId: number): Promise<{ message: string }> {
     const existing = await this.savedPostRepo.findOne({
-      where: { postId, userId },
+      where: { post: { id: postId.toString() }, user: { id: userId.toString() } },
+      relations: ['post', 'user'],
     });
 
     if (existing) {
@@ -22,15 +23,18 @@ export class FeedService {
       return { message: 'Post unsaved' };
     }
 
-    const savedPost = this.savedPostRepo.create({ postId, userId });
+    const savedPost = this.savedPostRepo.create({
+      post: { id: postId.toString() },
+      user: { id: userId.toString() },
+    });
     await this.savedPostRepo.save(savedPost);
     return { message: 'Post saved' };
   }
 
   async getSavedPosts(userId: number, page = 1, limit = 10) {
     const [savedPosts, total] = await this.savedPostRepo.findAndCount({
-      where: { user: { id: userId } },
-      relations: ['post'],
+      where: { user: { id: userId.toString() } },
+      relations: ['post', 'user'],
       skip: (page - 1) * limit,
       take: limit,
       order: { createdAt: 'DESC' },
