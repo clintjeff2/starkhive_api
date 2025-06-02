@@ -9,18 +9,36 @@ export interface Application {
   recruiterId: string;
 }
 
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
 export class ApplicationsService {
-  private notificationsService: NotificationsService;
   private applications: Application[] = [];
 
-  constructor() {
-    this.notificationsService = new NotificationsService();
-  }
+  constructor(
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
-  // Simulate applying for a job
-  async applyForJob(jobId: string, freelancerId: string, recruiterId: string): Promise<Application> {
+  /**
+   * Processes a job application and sends notification to the recruiter
+   * @param jobId The ID of the job being applied for
+   * @param freelancerId The ID of the freelancer applying
+   * @param recruiterId The ID of the recruiter to notify
+   * @returns The created application
+   * @throws Error if application processing fails
+   */
+  async applyForJob(
+    jobId: string,
+    freelancerId: string,
+    recruiterId: string,
+  ): Promise<Application> {
+    // Input validation
+    if (!jobId || !freelancerId || !recruiterId) {
+      throw new Error('All parameters (jobId, freelancerId, recruiterId) are required');
+    }
+
     const application: Application = {
-      id: `${Date.now()}`,
+      id: `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       jobId,
       freelancerId,
       recruiterId,
@@ -31,15 +49,22 @@ export class ApplicationsService {
     const jobLink = `/jobs/${jobId}`;
     const freelancerProfileLink = `/freelancers/${freelancerId}`;
 
-    // Send notification to recruiter
-    const notificationPayload: NotificationPayload = {
-      recruiterId,
-      jobId,
-      freelancerId,
-      jobLink,
-      freelancerProfileLink,
-    };
-    await this.notificationsService.sendNotification(notificationPayload);
+    try {
+      // Send notification to recruiter
+      const notificationPayload: NotificationPayload = {
+        recruiterId,
+        jobId,
+        freelancerId,
+        jobLink,
+        freelancerProfileLink,
+      };
+      await this.notificationsService.sendNotification(notificationPayload);
+    } catch (error) {
+      // Log error but don't fail the application creation
+      // Consider implementing a retry mechanism or dead letter queue
+      // eslint-disable-next-line no-console
+      console.error(`Failed to send notification for application ${application.id}:`, error);
+    }
 
     return application;
   }
