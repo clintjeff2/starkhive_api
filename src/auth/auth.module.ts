@@ -3,11 +3,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from './entities/user.entity';
+import { HashingProvider } from './providers/hashingProvider';
+import { BcryptProvider } from './providers/bcrypt';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User])],
-  providers: [AuthService],
+  providers: [AuthService, {
+      provide: HashingProvider, // Use the abstract class as a token
+      useClass: BcryptProvider, // Bind it to the concrete implementation
+    },],
   controllers: [AuthController],
-  exports: [AuthService, TypeOrmModule],
+  exports: [AuthService, TypeOrmModule, HashingProvider],
 })
 export class AuthModule {}

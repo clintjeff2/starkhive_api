@@ -1,11 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUUID, Length, NotEquals } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, Length } from 'class-validator';
 
 export class CreateMessageDto {
   @ApiProperty({ description: 'ID of the message receiver' })
   @IsNotEmpty()
   @IsUUID()
-  @NotEquals('senderId', { message: 'Cannot send message to yourself' })
   receiverId: string;
 
   @ApiProperty({ description: 'Content of the message', minLength: 1, maxLength: 1000 })
