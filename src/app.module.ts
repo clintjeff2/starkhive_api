@@ -9,6 +9,8 @@ import * as dotenv from 'dotenv';
 import { SavedPost } from './feed/entities/savedpost.entity';
 import { Post } from './post/entities/post.entity';
 import { MessagingModule } from './messaging/messaging.module';
+import { Application } from './applications/entities/application.entity';
+import { ApplicationsModule } from './applications/applications.module';
 dotenv.config(); 
 
 @Module({
@@ -27,7 +29,7 @@ dotenv.config();
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, SavedPost, Post],
+        entities: [User, SavedPost, Post, Application],
         synchronize: true, 
       }),
     }),
@@ -35,6 +37,7 @@ dotenv.config();
     FeedModule,
     PostModule,
     MessagingModule,
+    ApplicationsModule,
   ],
 })
 export class AppModule {}
