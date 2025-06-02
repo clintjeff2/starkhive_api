@@ -3,11 +3,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from './entities/user.entity';
+import { HashingProvider } from './providers/hashingProvider';
+import { BcryptProvider } from './providers/bcrypt';
+import { PasswordReset } from './entities/password-reset.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, PasswordReset]),
 
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -24,8 +27,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       },
     }),
   ],
-  providers: [AuthService],
+  providers: [AuthService, {
+      provide: HashingProvider, // Use the abstract class as a token
+      useClass: BcryptProvider, // Bind it to the concrete implementation
+    },],
   controllers: [AuthController],
-  exports: [AuthService, TypeOrmModule],
+  exports: [AuthService, TypeOrmModule, HashingProvider],
 })
 export class AuthModule {}
