@@ -10,8 +10,11 @@ import { SavedPost } from './feed/entities/savedpost.entity';
 import { Post } from './post/entities/post.entity';
 import { UserModule } from './user/user.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { JobModule } from './jobs/jobs.module';
+import { AntiSpamModule } from './anti-spam/anti-spam.module';
 import { Application } from './applications/entities/application.entity';
 import { ApplicationsModule } from './applications/applications.module';
+
 dotenv.config(); 
 
 @Module({
@@ -38,6 +41,8 @@ dotenv.config();
     FeedModule,
     PostModule,
     UserModule,
+    JobModule,
+    AntiSpamModule,
     MessagingModule,
     ApplicationsModule,
   ],
