@@ -15,11 +15,13 @@ import { PasswordReset } from './entities/password-reset.entity';
 
 @Injectable()
 export class AuthService {
-  mailService: any;
+  // TODO: Move allowedMimeTypes and maxFileSize to configuration
   private allowedMimeTypes = ['image/jpeg', 'image/png', 'application/pdf'];
   private maxFileSize = 5 * 1024 * 1024;
 
   constructor(
+    // Add mailService if you have one, e.g.:
+    private readonly mailService: any, 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(Portfolio)
@@ -80,7 +82,7 @@ export class AuthService {
     }
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     reset.user.password = hashedPassword;
-    // await this.usersService.update(reset.user.id, reset.user); // or userRepository.save
+    await this.userRepository.save(reset.user);
     await this.passwordResetRepository.delete({ id: reset.id });
   }
 
@@ -95,7 +97,7 @@ export class AuthService {
     }
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('User not found');
-    const fileUrl = `/uploads/portfolio/${file.filename}`;
+    const fileUrl = `/uploads/portfolio/${encodeURIComponent(file.filename)}`;
     const portfolio = this.portfolioRepository.create({
       title: dto.title,
       description: dto.description,

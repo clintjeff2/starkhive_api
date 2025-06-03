@@ -39,7 +39,6 @@ import { AuthGuardGuard } from './guards/auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { Express } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('auth')
@@ -106,11 +105,6 @@ async requestPasswordReset(@Body('email') email: string) {
       },
     }),
     limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
-      if (allowed.includes(file.mimetype)) cb(null, true);
-      else cb(new Error('Invalid file type'), false);
-    },
   }))
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreatePortfolioDto })
@@ -133,11 +127,6 @@ async requestPasswordReset(@Body('email') email: string) {
       },
     }),
     limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
-      if (allowed.includes(file.mimetype)) cb(null, true);
-      else cb(new Error('Invalid file type'), false);
-    },
   }))
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreatePortfolioDto })
