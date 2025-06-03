@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SavedPost } from './entities/savedpost.entity';
+import { Post } from '../post/entities/post.entity';
 import { CreateFeedDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
 
@@ -9,7 +10,10 @@ import { UpdateFeedDto } from './dto/update-feed.dto';
 export class FeedService {
   constructor(
     @InjectRepository(SavedPost)
-    private savedPostRepo: Repository<SavedPost>,
+    private readonly savedPostRepo: Repository<SavedPost>,
+
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
   ) {}
 
   async toggleSavePost(postId: number, userId: number): Promise<{ message: string }> {
@@ -48,6 +52,22 @@ export class FeedService {
     };
   }
 
+  async getWeeklyNewPostsCount(): Promise<Array<{ week: string; count: number }>> {
+    const raw = await this.postRepository
+      .createQueryBuilder('post')
+      .select(`TO_CHAR(DATE_TRUNC('week', post."createdAt"), 'YYYY-MM-DD')`, 'week')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy(`DATE_TRUNC('week', post."createdAt")`)
+      .orderBy(`DATE_TRUNC('week', post."createdAt")`, 'DESC')
+      .getRawMany<{ week: string; count: string }>();
+
+    return raw.map(r => ({
+      week: r.week,
+      count: parseInt(r.count, 10),
+    }));
+  }
+
+  // Optional CRUD methods - adjust as needed
   create(createFeedDto: CreateFeedDto) {
     return 'This action adds a new feed';
   }
