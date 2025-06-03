@@ -12,25 +12,30 @@ import * as crypto from 'crypto';
 import { addMinutes } from 'date-fns';
 import { UserService } from 'src/user/user.service';
 import { PasswordReset } from './entities/password-reset.entity';
+import { MailService } from '../mail/mail.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   // TODO: Move allowedMimeTypes and maxFileSize to configuration
-  private allowedMimeTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-  private maxFileSize = 5 * 1024 * 1024;
-
+  private allowedMimeTypes: string[];
+  private maxFileSize: number;
+  
   constructor(
-    // Add mailService if you have one, e.g.:
-    private readonly mailService: any, 
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(Portfolio)
-    private readonly portfolioRepository: Repository<Portfolio>,
-    private readonly jwtService: JwtService,
-    private readonly usersService: UserService,
-    @InjectRepository(PasswordReset)
-    private readonly passwordResetRepository: Repository<PasswordReset>,
-  ) {}
+  private readonly mailService: MailService,
+  @InjectRepository(User)
+  private readonly userRepository: Repository<User>,
+  @InjectRepository(Portfolio)
+  private readonly portfolioRepository: Repository<Portfolio>,
+  private readonly jwtService: JwtService,
+  private readonly usersService: UserService,
+  @InjectRepository(PasswordReset)
+  private readonly passwordResetRepository: Repository<PasswordReset>,
+  private readonly configService: ConfigService,
+  ) {
+  this.allowedMimeTypes = this.configService.get<string[]>('portfolio.allowedMimeTypes', ['image/jpeg', 'image/png', 'application/pdf']);
+  this.maxFileSize = this.configService.get<number>('portfolio.maxFileSize', 5 * 1024 * 1024);
+  }
 
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
     const { email, password, role } = registerDto;
