@@ -1,12 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Job } from './entities/job.entity';
 import { Application } from './entities/application.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
+
+import { AntiSpamService } from '../anti-spam/anti-spam.service';
 
 @Injectable()
 export class JobsService {
@@ -16,11 +19,22 @@ export class JobsService {
 
     @InjectRepository(Application)
     private readonly applicationRepository: Repository<Application>,
+
+    private readonly antiSpamService: AntiSpamService,
   ) {}
 
+  // Job CRUD with anti-spam check on create
   async createJob(createJobDto: CreateJobDto): Promise<Job> {
     const job = this.jobRepository.create(createJobDto);
-    return this.jobRepository.save(job);
+    const saved = await this.jobRepository.save(job);
+
+    const isSpam = await this.antiSpamService.analyzeJobPost(saved);
+    if (isSpam) {
+      saved.isFlagged = true;
+      await this.jobRepository.save(saved);
+    }
+
+    return saved;
   }
 
   async findAllJobs(): Promise<Job[]> {
@@ -49,10 +63,7 @@ export class JobsService {
     return { message: 'Job removed successfully' };
   }
 
-  //
-  // ─── EXISTING APPLICATION METHODS ──────────────────────────────────────────────
-  //
-
+  // Application CRUD
   async createApplication(createApplicationDto: CreateApplicationDto): Promise<Application> {
     const application = this.applicationRepository.create(createApplicationDto);
     return this.applicationRepository.save(application);
@@ -87,18 +98,7 @@ export class JobsService {
     return { message: 'Application removed successfully' };
   }
 
-  //
-  // ─── NEW ANALYTICS METHODS ─────────────────────────────────────────────────────
-  //
-
-  /**
-   * Returns weekly new job counts:
-   * [
-   *   { week: '2025-05-26', count: 5 },
-   *   { week: '2025-05-19', count: 2 },
-   *   …
-   * ]
-   */
+  // Weekly analytics for jobs
   async getWeeklyNewJobsCount(): Promise<Array<{ week: string; count: number }>> {
     const raw = await this.jobRepository
       .createQueryBuilder('job')
@@ -114,6 +114,7 @@ export class JobsService {
     }));
   }
 
+  // Weekly analytics for applications
   async getWeeklyNewApplicationsCount(): Promise<Array<{ week: string; count: number }>> {
     const raw = await this.applicationRepository
       .createQueryBuilder('application')

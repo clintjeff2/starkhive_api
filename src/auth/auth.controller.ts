@@ -9,16 +9,18 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register-user.dto';
-import { LogInDto } from './dto/loginDto';
 import { User } from './entities/user.entity';
 import { FeedService } from '../feed/feed.service';
 import { JobsService } from '../jobs/jobs.service';
+
+import { LoginDto } from './dto/login-user.dto';
 
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
 import { RoleDecorator } from './decorators/role.decorator';
@@ -50,12 +52,22 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
-  @Post('signIn')
+
+  
+ 
+ 
+  @Post('login')
+  @ApiOperation({ summary: 'Login with email and password' })
+  
   @RoleDecorator(UserRole.ADMIN)
   @UseGuards(AuthGuardGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
-  async SignIn(@Body() signInDto: LogInDto) {
-    return this.authService.SignIn(signInDto);
+  @ApiResponse({ status: 200, description: 'Login successful, JWT returned' })
+  @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
+  @ApiBadRequestResponse({ description: 'Validation failed' })
+  async login(@Body() loginDto: LoginDto) {
+    const token = await this.authService.login(loginDto);
+    return { access_token: token };
   }
 
   @Post('request-password-reset')

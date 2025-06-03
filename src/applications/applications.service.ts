@@ -1,49 +1,53 @@
 // src/applications/applications.service.ts
 
 import { NotificationsService, NotificationPayload } from '../notifications/notifications.service';
-
-export interface Application {
-  id: string;
-  jobId: string;
-  freelancerId: string;
-  recruiterId: string;
-}
-
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Application } from './entities/application.entity';
 
 @Injectable()
 export class ApplicationsService {
-  private applications: Application[] = [];
-
   constructor(
+    @InjectRepository(Application)
+    private readonly applicationRepository: Repository<Application>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
    * Processes a job application and sends notification to the recruiter
+   * Prevents duplicate applications (one per job per freelancer)
    * @param jobId The ID of the job being applied for
    * @param freelancerId The ID of the freelancer applying
    * @param recruiterId The ID of the recruiter to notify
+   * @param coverLetter The cover letter/message
    * @returns The created application
-   * @throws Error if application processing fails
+   * @throws ConflictException if duplicate application exists
    */
   async applyForJob(
     jobId: string,
     freelancerId: string,
     recruiterId: string,
+    coverLetter: string,
   ): Promise<Application> {
-    // Input validation
-    if (!jobId || !freelancerId || !recruiterId) {
-      throw new Error('All parameters (jobId, freelancerId, recruiterId) are required');
+    if (!jobId || !freelancerId || !recruiterId || !coverLetter) {
+      throw new ConflictException('All parameters (jobId, freelancerId, recruiterId, coverLetter) are required');
     }
 
-    const application: Application = {
-      id: `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    // Duplicate check
+    const existing = await this.applicationRepository.findOne({ where: { jobId, freelancerId } });
+    if (existing) {
+      throw new ConflictException('You have already applied to this job.');
+    }
+
+    // Create and save application
+    const application = this.applicationRepository.create({
       jobId,
       freelancerId,
       recruiterId,
-    };
-    this.applications.push(application);
+      coverLetter,
+    });
+    await this.applicationRepository.save(application);
 
     // Build links (replace with your actual URL structure)
     const jobLink = `/jobs/${jobId}`;
@@ -61,7 +65,6 @@ export class ApplicationsService {
       await this.notificationsService.sendNotification(notificationPayload);
     } catch (error) {
       // Log error but don't fail the application creation
-      // Consider implementing a retry mechanism or dead letter queue
       // eslint-disable-next-line no-console
       console.error(`Failed to send notification for application ${application.id}:`, error);
     }
