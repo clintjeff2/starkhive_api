@@ -10,7 +10,6 @@ import { LogInProvider } from './providers/loginProvider';
 
 @Injectable()
 export class AuthService {
-  /**
    * Promote a user to admin. Only super admins can perform this action.
    * @param requesterId - ID of the user making the request
    * @param targetUserId - ID of the user to be promoted
@@ -97,7 +96,6 @@ export class AuthService {
     
   }
   
-}
 
   async login(loginDto: LoginDto): Promise<string> {
     const { email, password } = loginDto;

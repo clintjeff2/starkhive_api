@@ -52,5 +52,4 @@ async getApplicationsByJob(
   const recruiterId = req.user.id;
   return this.applicationsService.findApplicationsByJobId(jobId, recruiterId);
 }
-
 }

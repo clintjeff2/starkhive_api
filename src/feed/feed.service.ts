@@ -3,13 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SavedPost } from './entities/savedpost.entity';
 import { Post } from '../post/entities/post.entity';
+import { Report } from './entities/report.entity';
 import { CreateFeedDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
 import { Job } from "../jobs/entities/job.entity"
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { JobStatus } from './enums/job-status.enum';
 import { Report } from './entities/report.entity';
-
 
 @Injectable()
 export class FeedService {
@@ -80,7 +80,6 @@ export class FeedService {
     }));
   }
 
-
   async moderateJob(jobId: string, status: JobStatus): Promise<Job> {
     const job = await this.jobRepo.findOne({ where: { id: Number(jobId) }, relations: ['freelancer'] });
     if (!job) throw new NotFoundException('Job not found');
@@ -136,4 +135,21 @@ export class FeedService {
   remove(id: number) {
     return `This action removes a #${id} feed`;
   }
+
+async getReportedContent(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const [reports, total] = await this.reportRepository.findAndCount({
+      relations: ['post', 'reporter'],
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    return {
+      total,
+      page,
+      limit,
+      data: reports,
+    };
+  }
+
 }

@@ -7,7 +7,6 @@ import { Post } from '../post/entities/post.entity';
 import { Report } from './entities/report.entity';
 import { Job } from 'src/jobs/entities/job.entity';
 import { NotificationsModule } from 'src/notifications/notifications.module';
-
 @Module({
   imports: [NotificationsModule, TypeOrmModule.forFeature([SavedPost, Post, Job])],
   controllers: [FeedController],
