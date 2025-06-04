@@ -8,6 +8,8 @@ import { UpdateFeedDto } from './dto/update-feed.dto';
 import { Job } from "../jobs/entities/job.entity"
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { JobStatus } from './enums/job-status.enum';
+import { Report } from './entities/report.entity';
+
 
 @Injectable()
 export class FeedService {
@@ -17,6 +19,9 @@ export class FeedService {
 
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
+
+    @InjectRepository(Report)
+    private readonly reportRepository: Repository<Report>,
 
     @InjectRepository(Job)
     private readonly jobRepo: Repository<Job>,
@@ -75,6 +80,7 @@ export class FeedService {
     }));
   }
 
+
   async moderateJob(jobId: string, status: JobStatus): Promise<Job> {
     const job = await this.jobRepo.findOne({ where: { id: Number(jobId) }, relations: ['freelancer'] });
     if (!job) throw new NotFoundException('Job not found');
@@ -91,6 +97,23 @@ export class FeedService {
     
   
     return updatedJob;
+  }
+
+  
+    async getReportedContent(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const [reports, total] = await this.reportRepository.findAndCount({
+      relations: ['post', 'reporter'],
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    return {
+      total,
+      page,
+      limit,
+      data: reports,
+    };
   }
 
   // Optional CRUD methods - adjust as needed
