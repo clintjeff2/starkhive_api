@@ -5,6 +5,8 @@ import { SavedPost } from 'src/feed/entities/savedpost.entity';
 import { Portfolio } from './portfolio.entity';
 import { Application } from 'src/applications/entities/application.entity';
 import { Job } from 'src/jobs/entities/job.entity';
+import { Comment } from 'src/feed/entities/comment.entity';
+
 
 @Entity()
 export class User {
@@ -48,6 +50,9 @@ export class User {
   portfolios: Portfolio[];
 
   @OneToMany(() => Job, (job) => job.recruiter)
-jobs: Job [];
+  jobs: Job [];
+
+  @OneToMany(() => Comment, (comment) => comment.user)
+  comments: Comment[];
 
 }

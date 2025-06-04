@@ -17,10 +17,16 @@ import { CreateFeedDto, GetSavedPostsDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.strategy';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { User } from 'src/auth/entities/user.entity';
 import { Report } from './entities/report.entity';
 import { UserRole } from '../auth/enums/userRole.enum';
 import { RolesGuard } from '../auth/guards/role.guard';
 import { RoleDecorator } from '../auth/decorators/role.decorator';
+
+interface AuthenticatedRequest extends Request {
+  user: User;
+}
 
 @Controller('feed')
 export class FeedController {
@@ -48,6 +54,17 @@ export class FeedController {
     const userId = req['user'].id;
     return this.feedService.getSavedPosts(userId, query.page, query.limit);
   }
+
+  @UseGuards(JwtAuthGuard)
+@Post(':postId/comments')
+async addComment(
+  @Param('postId') postId: string,
+  @Body() dto: CreateCommentDto,
+  @Req() req: AuthenticatedRequest,
+) {
+  return await this.feedService.addComment(postId, req.user, dto);
+}
+
 
   @Post()
   create(@Body() createFeedDto: CreateFeedDto) {
