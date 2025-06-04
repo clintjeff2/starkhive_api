@@ -36,10 +36,21 @@ export class AuthService {
   private maxFileSize: number;
   
   constructor(
+    private readonly mailService: MailService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Portfolio)
+    private readonly portfolioRepository: Repository<Portfolio>,
+    private readonly jwtService: JwtService,
+    private readonly usersService: UserService,
+    @InjectRepository(PasswordReset)
+    private readonly passwordResetRepository: Repository<PasswordReset>,
+    private readonly configService: ConfigService,
     private readonly loginProvider: LogInProvider
-  ) {}
+  ) {
+    this.allowedMimeTypes = this.configService.get<string[]>('portfolio.allowedMimeTypes', ['image/jpeg', 'image/png', 'application/pdf']);
+    this.maxFileSize = this.configService.get<number>('portfolio.maxFileSize', 5 * 1024 * 1024);
+  }
 
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
     const { email, password, role } = registerDto;
@@ -55,6 +66,7 @@ export class AuthService {
     const { password: _, ...safeUser } = saved;
     return safeUser;
   }
+
 
   async getOneByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { email } });
@@ -85,4 +97,19 @@ export class AuthService {
     
   }
   
+
+
+  async login(loginDto: LoginDto): Promise<string> {
+    const { email, password } = loginDto;
+    const user = await this.userRepository.findOneBy({ email: email });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role
+    };
+    return this.jwtService.sign(payload);
+  }
 }
