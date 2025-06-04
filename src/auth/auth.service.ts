@@ -3,22 +3,13 @@ import { UserRole } from './enums/userRole.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import { Portfolio } from './entities/portfolio.entity';
 import * as bcrypt from 'bcryptjs';
 import { RegisterDto } from './dto/register-user.dto';
-import { LoginDto } from './dto/login-user.dto';
-import { CreatePortfolioDto } from './dto/create-portfolio.dto';
-import { JwtService } from '@nestjs/jwt';
-import * as crypto from 'crypto';
-import { addMinutes } from 'date-fns';
-import { UserService } from 'src/user/user.service';
-import { PasswordReset } from './entities/password-reset.entity';
-import { MailService } from '../mail/mail.service';
-import { ConfigService } from '@nestjs/config';
+import { LogInDto } from './dto/loginDto';
+import { LogInProvider } from './providers/loginProvider';
 
 @Injectable()
 export class AuthService {
-  /**
    * Promote a user to admin. Only super admins can perform this action.
    * @param requesterId - ID of the user making the request
    * @param targetUserId - ID of the user to be promoted
@@ -55,6 +46,7 @@ export class AuthService {
     @InjectRepository(PasswordReset)
     private readonly passwordResetRepository: Repository<PasswordReset>,
     private readonly configService: ConfigService,
+    private readonly loginProvider: LogInProvider
   ) {
     this.allowedMimeTypes = this.configService.get<string[]>('portfolio.allowedMimeTypes', ['image/jpeg', 'image/png', 'application/pdf']);
     this.maxFileSize = this.configService.get<number>('portfolio.maxFileSize', 5 * 1024 * 1024);
@@ -62,14 +54,50 @@ export class AuthService {
 
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
     const { email, password, role } = registerDto;
+  
     const existing = await this.userRepository.findOne({ where: { email } });
     if (existing) throw new Error('Email already exists');
+  
     const hashed = await bcrypt.hash(password, 10);
+  
     const user = this.userRepository.create({ email, password: hashed, role });
     const saved = await this.userRepository.save(user);
+  
     const { password: _, ...safeUser } = saved;
     return safeUser;
   }
+
+
+  async getOneByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { email } });
+  }
+  
+  async sendPasswordResetEmail(email: string): Promise<any> {
+    // implementation
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<any> {
+    // implementation
+  }
+
+  async createPortfolio(userId: string, body: any, file: any): Promise<any> {
+    // implementation
+  }
+
+  async updatePortfolio(userId: string, id: string, body: any, file: any): Promise<any> {
+    // implementation
+  }
+
+  async deletePortfolio(userId: string, id: string): Promise<any> {
+    // implementation
+  }
+
+  async getUserPortfolios(userId: string): Promise<any> {
+    // implementation
+    
+  }
+  
+
 
   async login(loginDto: LoginDto): Promise<string> {
     const { email, password } = loginDto;

@@ -3,13 +3,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/entities/user.entity';
-import { MessagingModule } from './messaging/messaging.module';
 import { Message } from './messaging/entities/message.entity';
 import { FeedModule } from './feed/feed.module';
 import { PostModule } from './post/post.module';
 import * as dotenv from 'dotenv';
 import { SavedPost } from './feed/entities/savedpost.entity';
 import { Post } from './post/entities/post.entity';
+import { MessagingModule } from './messaging/messaging.module';
 import { UserModule } from './user/user.module';
 import { JobModule } from './jobs/jobs.module';
 import { AntiSpamModule } from './anti-spam/anti-spam.module';
@@ -42,9 +42,10 @@ dotenv.config();
     MessagingModule,
     FeedModule,
     PostModule,
-    UserModule,
     JobModule,
     AntiSpamModule,
+    MessagingModule,
+    JobModule,
     ApplicationsModule,
   ],
 })

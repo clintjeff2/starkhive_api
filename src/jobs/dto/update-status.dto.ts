@@ -1,9 +1,5 @@
 import { IsEnum } from 'class-validator';
-
-export enum JobStatus {
-  OPEN = 'open',
-  CLOSED = 'closed',
-}
+import { JobStatus } from 'src/feed/enums/job-status.enum';
 
 export class UpdateJobStatusDto {
   @IsEnum(JobStatus)

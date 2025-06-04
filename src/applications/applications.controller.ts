@@ -1,10 +1,12 @@
-import { Body, Controller, Post, Request, UseGuards, ConflictException } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards, ConflictException, Get } from '@nestjs/common';
 import { ApplicationsService } from './applications.service';
 import { ApplyJobDto } from './dto/apply-job.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.strategy';
 import { RolesGuard } from '../auth/guards/role.guard';
 import { RoleDecorator } from '../auth/decorators/role.decorator';
 import { UserRole } from '../auth/enums/userRole.enum';
+import { User } from 'src/auth/entities/user.entity';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
 @Controller('applications')
 export class ApplicationsController {
@@ -27,5 +29,17 @@ export class ApplicationsController {
       recruiterId,
       applyJobDto.coverLetter,
     );
+  }
+
+  @Get('my')
+  @RoleDecorator(UserRole.FREELANCER)
+  async getMyApplications(@GetUser() user: User) {
+    const applications = await this.applicationsService.getApplicationsByUser(user.id);
+
+    return applications.map((app) => ({
+      jobTitle: app.job.title,
+      submittedAt: app.createdAt,
+      status: app.status,
+    }));
   }
 }

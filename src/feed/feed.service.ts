@@ -3,11 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SavedPost } from './entities/savedpost.entity';
 import { Post } from '../post/entities/post.entity';
+import { Report } from './entities/report.entity';
 import { CreateFeedDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
-import { Report } from './entities/report.entity';
-import { Job } from "../jobs/entities/job.entity";
-import { NotificationsService } from '../notifications/notifications.service';
+import { Job } from "../jobs/entities/job.entity"
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { JobStatus } from './enums/job-status.enum';
 
 @Injectable()
 export class FeedService {
@@ -78,32 +79,21 @@ export class FeedService {
     }));
   }
 
-  async getReportedContent(page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit;
-    const [reports, total] = await this.reportRepository.findAndCount({
-      relations: ['post', 'reporter'],
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
-    return {
-      total,
-      page,
-      limit,
-      data: reports,
-    };
-  }
-
-  async moderateJob(jobId: string, status: 'approved' | 'rejected'): Promise<Job> {
+  async moderateJob(jobId: string, status: JobStatus): Promise<Job> {
     const job = await this.jobRepo.findOne({ where: { id: Number(jobId) }, relations: ['freelancer'] });
     if (!job) throw new NotFoundException('Job not found');
-
+  
     job.status = status;
+  
     const updatedJob = await this.jobRepo.save(job);
-
-    // Notify the freelancer
-    await this.notificationsService.sendJobStatusNotification(job.freelancer.id, job.title, status);
-
+  
+    await this.notificationsService.sendJobStatusNotification(
+      job.freelancer.id,
+      job.title,
+      status as 'approved' | 'rejected' 
+    );
+    
+  
     return updatedJob;
   }
 
@@ -127,4 +117,21 @@ export class FeedService {
   remove(id: number) {
     return `This action removes a #${id} feed`;
   }
+
+async getReportedContent(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const [reports, total] = await this.reportRepository.findAndCount({
+      relations: ['post', 'reporter'],
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    return {
+      total,
+      page,
+      limit,
+      data: reports,
+    };
+  }
+
 }
