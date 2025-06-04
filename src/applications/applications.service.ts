@@ -71,4 +71,13 @@ export class ApplicationsService {
 
     return application;
   }
+
+  async getApplicationsByUser(userId: string): Promise<Application[]> {
+    return this.applicationRepository.find({
+      where: { user: { id: userId } }, // id is string here, matching entity
+      relations: ['job'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+  
 }

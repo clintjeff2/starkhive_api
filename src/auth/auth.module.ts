@@ -9,6 +9,8 @@ import { PasswordReset } from './entities/password-reset.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailService} from '../mail/mail.service';
+import { LogInProvider } from './providers/loginProvider';
+import { GenerateTokensProvider } from './providers/generateTokensProvider';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, PasswordReset]),
@@ -30,6 +32,8 @@ import { MailService} from '../mail/mail.service';
   ],
   providers: [
     AuthService,
+    LogInProvider,
+    GenerateTokensProvider,
     MailService,
     {
       provide: HashingProvider, // Use the abstract class as a token

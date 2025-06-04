@@ -2,12 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
 import { User } from './entities/user.entity';
-import { ConnectWalletDto } from './dto/connect-wallet.dto';
-import {
-  WalletAlreadyConnectedException,
-  WalletAddressAlreadyExistsException,
-} from './exceptions/wallet.exceptions';
-
+import { ConnectWalletDto } from './connect-wallet.dto';
+import { WalletAddressAlreadyExistsException, WalletAlreadyConnectedException } from './entities/exceptions/wallet.exceptions';
 @Injectable()
 export class AuthService {
   constructor(
@@ -51,7 +47,13 @@ export class AuthService {
 
       // Remove password from response
       const { password, ...userWithoutPassword } = updatedUser;
-      return userWithoutPassword;
+
+      return {
+        ...userWithoutPassword,
+        isWalletConnected: updatedUser.isWalletConnected,
+        canModifyWallet: updatedUser.canModifyWallet,
+      };
+      
     } catch (error) {
       // Handle unique constraint violation
       if (error instanceof QueryFailedError && error.message.includes('duplicate')) {

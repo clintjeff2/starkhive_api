@@ -6,7 +6,8 @@ import { Post } from '../post/entities/post.entity';
 import { CreateFeedDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
 import { Job } from "../jobs/entities/job.entity"
-import { NotificationsService } from '../notifications/notifications.service'; 
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { JobStatus } from './enums/job-status.enum';
 
 @Injectable()
 export class FeedService {
@@ -74,16 +75,21 @@ export class FeedService {
     }));
   }
 
-  async moderateJob(jobId: string, status: 'approved' | 'rejected'): Promise<Job> {
+  async moderateJob(jobId: string, status: JobStatus): Promise<Job> {
     const job = await this.jobRepo.findOne({ where: { id: Number(jobId) }, relations: ['freelancer'] });
     if (!job) throw new NotFoundException('Job not found');
-
+  
     job.status = status;
+  
     const updatedJob = await this.jobRepo.save(job);
-
-    // Notify the freelancer
-    await this.notificationsService.sendJobStatusNotification(job.freelancer.id, job.title, status);
-
+  
+    await this.notificationsService.sendJobStatusNotification(
+      job.freelancer.id,
+      job.title,
+      status as 'approved' | 'rejected' 
+    );
+    
+  
     return updatedJob;
   }
 

@@ -5,9 +5,11 @@ import { FeedService } from './feed.service';
 import { FeedController } from './feed.controller';
 import { SavedPost } from './entities/savedpost.entity';
 import { Post } from '../post/entities/post.entity';
+import { Job } from 'src/jobs/entities/job.entity';
+import { NotificationsModule } from 'src/notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SavedPost, Post])],
+  imports: [NotificationsModule, TypeOrmModule.forFeature([SavedPost, Post, Job])],
   controllers: [FeedController],
   providers: [FeedService],
   exports: [FeedService],

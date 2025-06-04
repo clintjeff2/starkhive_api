@@ -18,8 +18,7 @@ import { RegisterDto } from './dto/register-user.dto';
 import { User } from './entities/user.entity';
 import { FeedService } from '../feed/feed.service';
 import { JobsService } from '../jobs/jobs.service';
-
-import { LoginDto } from './dto/login-user.dto';
+// import { LoginDto } from './dto/login-user.dto';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 
 import {
@@ -31,7 +30,6 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-
 import { RoleDecorator } from './decorators/role.decorator';
 import { UserRole } from './enums/userRole.enum';
 import { RolesGuard } from './guards/role.guard';
@@ -40,6 +38,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AuthGuard } from '@nestjs/passport';
+import { LogInDto } from './dto/loginDto';
+import { LogInProvider } from './providers/loginProvider';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -48,6 +48,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly feedService: FeedService,
     private readonly jobsService: JobsService,
+    private readonly logInProvider: LogInProvider,
   ) {}
 
   @Post('register')
@@ -77,8 +78,8 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login successful, JWT returned' })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
   @ApiBadRequestResponse({ description: 'Validation failed' })
-  async login(@Body() loginDto: LoginDto) {
-    const token = await this.authService.login(loginDto);
+  async login(@Body() loginDto: LogInDto) {
+    const token = await this.logInProvider.Login(loginDto);
     return { access_token: token };
   }
 

@@ -3,6 +3,7 @@ import { UserRole } from '../enums/userRole.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { SavedPost } from 'src/feed/entities/savedpost.entity';
 import { Portfolio } from './portfolio.entity';
+import { Application } from 'src/applications/entities/application.entity';
 
 @Entity()
 export class User {
@@ -19,6 +20,9 @@ export class User {
   })
   @Column({ unique: true })
   email: string;
+
+  @OneToMany(() => Application, (application) => application.user)
+  applications: Application[];
 
   @Column()
   password: string;

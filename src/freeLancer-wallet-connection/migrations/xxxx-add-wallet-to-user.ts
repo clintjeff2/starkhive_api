@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner, TableColumn, Index } from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn, TableIndex } from 'typeorm';
 
 export class AddWalletToUser1234567890123 implements MigrationInterface {
   name = 'AddWalletToUser1234567890123';
@@ -31,7 +31,11 @@ export class AddWalletToUser1234567890123 implements MigrationInterface {
     // Create unique index on wallet_address
     await queryRunner.createIndex(
       'users',
-      new Index('idx_wallet_address', ['wallet_address'], { isUnique: true }),
+      new TableIndex({
+        name: 'idx_wallet_address',
+        columnNames: ['wallet_address'],
+        isUnique: true,
+      }),
     );
   }
 
