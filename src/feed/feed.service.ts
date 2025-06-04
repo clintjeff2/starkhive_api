@@ -8,6 +8,9 @@ import { UpdateFeedDto } from './dto/update-feed.dto';
 import { Job } from "../jobs/entities/job.entity"
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { JobStatus } from './enums/job-status.enum';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { Comment } from './entities/comment.entity';
+import { User } from 'src/auth/entities/user.entity';
 
 @Injectable()
 export class FeedService {
@@ -22,6 +25,9 @@ export class FeedService {
     private readonly jobRepo: Repository<Job>,
 
     private readonly notificationsService: NotificationsService,
+
+    @InjectRepository(Comment) 
+    private commentRepository: Repository<Comment>,
   ) {}
 
   async toggleSavePost(postId: number, userId: number): Promise<{ message: string }> {
@@ -93,6 +99,24 @@ export class FeedService {
     return updatedJob;
   }
 
+
+
+  async addComment(
+    postId: string,
+    user: User,
+    createCommentDto: CreateCommentDto,
+  ): Promise<Comment> {
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Post not found');
+
+    const comment = this.commentRepository.create({
+      content: createCommentDto.content,
+      user,
+      post,
+    });
+
+    return await this.commentRepository.save(comment);
+  }
   // Optional CRUD methods - adjust as needed
   create(createFeedDto: CreateFeedDto) {
     return 'This action adds a new feed';
