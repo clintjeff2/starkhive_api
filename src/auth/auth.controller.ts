@@ -44,6 +44,21 @@ import { AuthGuard } from '@nestjs/passport';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
+  /**
+   * Promote a user to admin. Only accessible by super admins.
+   */
+  @Patch('promote/:userId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @RoleDecorator(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Promote a user to admin (super admin only)' })
+  @ApiResponse({ status: 200, description: 'User promoted to admin' })
+  @ApiUnauthorizedResponse({ description: 'Only super admins can promote users' })
+  @ApiBadRequestResponse({ description: 'Target user does not exist' })
+  async promoteToAdmin(@Request() req, @Param('userId') userId: string) {
+    const updatedUser = await this.authService.promoteToAdmin(req.user.id, userId);
+    return { message: `User ${updatedUser.email} has been promoted to admin.` };
+  }
+
   constructor(
     private readonly authService: AuthService,
     private readonly feedService: FeedService,
