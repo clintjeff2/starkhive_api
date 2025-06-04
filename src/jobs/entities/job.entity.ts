@@ -27,5 +27,7 @@ export class Job {
 
   @CreateDateColumn()
   createdAt: Date;
+  status: string;
+  freelancer: any;
 }
  

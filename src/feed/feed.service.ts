@@ -5,6 +5,8 @@ import { SavedPost } from './entities/savedpost.entity';
 import { Post } from '../post/entities/post.entity';
 import { CreateFeedDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
+import { Job } from "../jobs/entities/job.entity"
+import { NotificationsService } from '../notifications/notifications.service'; 
 
 @Injectable()
 export class FeedService {
@@ -14,6 +16,11 @@ export class FeedService {
 
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
+
+    @InjectRepository(Job)
+    private readonly jobRepo: Repository<Job>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async toggleSavePost(postId: number, userId: number): Promise<{ message: string }> {
@@ -65,6 +72,19 @@ export class FeedService {
       week: r.week,
       count: parseInt(r.count, 10),
     }));
+  }
+
+  async moderateJob(jobId: string, status: 'approved' | 'rejected'): Promise<Job> {
+    const job = await this.jobRepo.findOne({ where: { id: Number(jobId) }, relations: ['freelancer'] });
+    if (!job) throw new NotFoundException('Job not found');
+
+    job.status = status;
+    const updatedJob = await this.jobRepo.save(job);
+
+    // Notify the freelancer
+    await this.notificationsService.sendJobStatusNotification(job.freelancer.id, job.title, status);
+
+    return updatedJob;
   }
 
   // Optional CRUD methods - adjust as needed

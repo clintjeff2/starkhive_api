@@ -36,6 +36,9 @@ export class User {
 
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
+
+  notifications: any;
+
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolios: Portfolio[];
 }
