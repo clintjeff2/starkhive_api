@@ -8,7 +8,7 @@ import {
   DefaultValuePipe,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
-import { AuthGuard } from '../auth/guards/auth.guard';
+import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('notifications')
