@@ -26,7 +26,7 @@ export class AuthService {
   async promoteToAdmin(requesterId: string, targetUserId: string): Promise<User> {
     // Get the requesting user
     const requester = await this.userRepository.findOne({ where: { id: requesterId } });
-    if (!requester || requester.role !== 'super_admin') {
+    if (!requester || requester.role !== UserRole.SUPER_ADMIN) {
       throw new UnauthorizedException('Only super admins can promote users to admin');
     }
     // Get the target user
