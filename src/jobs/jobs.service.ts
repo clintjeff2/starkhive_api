@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -8,6 +8,7 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { CreateApplicationDto } from 'src/applications/dto/create-application.dto'; 
 import { UpdateApplicationDto } from 'src/applications/dto/update-application.dto';
+import { UpdateJobStatusDto } from './dto/update-status.dto';
 
 import { AntiSpamService } from '../anti-spam/anti-spam.service';
 
@@ -128,5 +129,18 @@ export class JobsService {
       week: r.week,
       count: parseInt(r.count, 10),
     }));
+  }
+
+  async updateJobStatus(id: number, updateStatusDto: UpdateJobStatusDto, userId: number): Promise<Job> {
+    const job = await this.findJobById(id);
+    
+    // TODO: Add proper user ownership check once user system is implemented
+    // For now, we'll just throw a placeholder error
+    if (job.ownerId !== userId) {
+      throw new ForbiddenException('Only the job owner can update the job status');
+    }
+
+    job.status = updateStatusDto.status;
+    return this.jobRepository.save(job);
   }
 }

@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { JobStatus } from '../dto/update-status.dto';
 
 @Entity()
 export class Job {
@@ -13,6 +14,16 @@ export class Job {
 
   @Column({ default: false })
   isFlagged: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: JobStatus,
+    default: JobStatus.OPEN
+  })
+  status: JobStatus;
+
+  @Column()
+  ownerId: number;
 
   @CreateDateColumn()
   createdAt: Date;
