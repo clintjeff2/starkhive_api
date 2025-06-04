@@ -9,6 +9,7 @@ import { UpdateFeedDto } from './dto/update-feed.dto';
 import { Job } from "../jobs/entities/job.entity"
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { JobStatus } from './enums/job-status.enum';
+import { Report } from './entities/report.entity';
 
 @Injectable()
 export class FeedService {
@@ -95,6 +96,23 @@ export class FeedService {
     
   
     return updatedJob;
+  }
+
+  
+    async getReportedContent(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const [reports, total] = await this.reportRepository.findAndCount({
+      relations: ['post', 'reporter'],
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    return {
+      total,
+      page,
+      limit,
+      data: reports,
+    };
   }
 
   // Optional CRUD methods - adjust as needed

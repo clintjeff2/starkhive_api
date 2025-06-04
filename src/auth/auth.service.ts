@@ -34,7 +34,7 @@ export class AuthService {
   // TODO: Move allowedMimeTypes and maxFileSize to configuration
   private allowedMimeTypes: string[];
   private maxFileSize: number;
-  
+ 
   constructor(
     private readonly mailService: MailService,
     @InjectRepository(User)
@@ -67,7 +67,6 @@ export class AuthService {
     return safeUser;
   }
 
-
   async getOneByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { email } });
   }
@@ -98,7 +97,6 @@ export class AuthService {
   }
   
 
-
   async login(loginDto: LoginDto): Promise<string> {
     const { email, password } = loginDto;
     const user = await this.userRepository.findOneBy({ email: email });
@@ -113,3 +111,4 @@ export class AuthService {
     return this.jwtService.sign(payload);
   }
 }
+

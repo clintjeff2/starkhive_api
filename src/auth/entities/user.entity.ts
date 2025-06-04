@@ -4,6 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { SavedPost } from 'src/feed/entities/savedpost.entity';
 import { Portfolio } from './portfolio.entity';
 import { Application } from 'src/applications/entities/application.entity';
+import { Job } from 'src/jobs/entities/job.entity';
 
 @Entity()
 export class User {
@@ -45,4 +46,8 @@ export class User {
 
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolios: Portfolio[];
+
+  @OneToMany(() => Job, (job) => job.recruiter)
+jobs: Job [];
+
 }
