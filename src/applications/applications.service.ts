@@ -1,10 +1,9 @@
-// src/applications/applications.service.ts
-
 import { NotificationsService, NotificationPayload } from '../notifications/notifications.service';
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Application } from './entities/application.entity';
+import { Job } from 'src/jobs/entities/job.entity';
 
 @Injectable()
 export class ApplicationsService {
@@ -12,6 +11,9 @@ export class ApplicationsService {
     @InjectRepository(Application)
     private readonly applicationRepository: Repository<Application>,
     private readonly notificationsService: NotificationsService,
+
+    @InjectRepository(Job) // 👈 This is required!
+    private jobRepository: Repository<Job>,
   ) {}
 
   /**
@@ -79,5 +81,24 @@ export class ApplicationsService {
       order: { createdAt: 'DESC' },
     });
   }
+
+  async findApplicationsByJobId(jobId: number, recruiterId: number) {
+    // Check if the job belongs to the recruiter
+    const job = await this.jobRepository.findOne({
+      where: { id: jobId },
+      relations: ['recruiter'],
+    });
+  
+    if (!job || job.recruiterId) {
+      throw new ForbiddenException('You are not authorized to view these applications.');
+    }
+  
+    // Fetch applications with freelancer info
+    return this.applicationRepository.find({
+      where: { job: { id: jobId } },
+      relations: ['freelancer'],
+    });
+  }
+  
   
 }

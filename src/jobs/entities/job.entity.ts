@@ -1,6 +1,7 @@
 import { Application } from 'src/applications/entities/application.entity';
+import { User } from 'src/auth/entities/user.entity';
 import { JobStatus } from 'src/feed/enums/job-status.enum';
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity()
 export class Job {
@@ -28,6 +29,14 @@ export class Job {
 
   @Column()
   ownerId: number;
+
+  @ManyToOne(() => User, (user) => user.jobs, { eager: false })
+  @JoinColumn({ name: 'recruiterId' })
+  recruiter: User;
+
+  @Column()
+  recruiterId: string;
+
 
   @CreateDateColumn()
   createdAt: Date;

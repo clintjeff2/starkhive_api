@@ -9,7 +9,7 @@ import { Job } from 'src/jobs/entities/job.entity';
 import { User } from 'src/auth/entities/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Application, Notification, Job])],
+  imports: [TypeOrmModule.forFeature([Application, Notification, Job, User])],
   controllers: [ApplicationsController],
   providers: [ApplicationsService, NotificationsService],
   exports: [ApplicationsService],

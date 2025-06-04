@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Request, UseGuards, ConflictException, Get } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards, ConflictException, Get, Param, ParseIntPipe, Req } from '@nestjs/common';
 import { ApplicationsService } from './applications.service';
 import { ApplyJobDto } from './dto/apply-job.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.strategy';
@@ -42,4 +42,15 @@ export class ApplicationsController {
       status: app.status,
     }));
   }
+
+  @Get('job/:jobId')
+@UseGuards(JwtAuthGuard)
+async getApplicationsByJob(
+  @Param('jobId') jobId: number,
+  @Req() req: any,
+) {
+  const recruiterId = req.user.id;
+  return this.applicationsService.findApplicationsByJobId(jobId, recruiterId);
+}
+
 }
