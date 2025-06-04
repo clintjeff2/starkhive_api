@@ -5,8 +5,9 @@ import { SavedPost } from './entities/savedpost.entity';
 import { Post } from '../post/entities/post.entity';
 import { CreateFeedDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
-import { Job } from "../jobs/entities/job.entity"
-import { NotificationsService } from '../notifications/notifications.service'; 
+import { Report } from './entities/report.entity';
+import { Job } from "../jobs/entities/job.entity";
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class FeedService {
@@ -16,6 +17,9 @@ export class FeedService {
 
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
+
+    @InjectRepository(Report)
+    private readonly reportRepository: Repository<Report>,
 
     @InjectRepository(Job)
     private readonly jobRepo: Repository<Job>,
@@ -72,6 +76,22 @@ export class FeedService {
       week: r.week,
       count: parseInt(r.count, 10),
     }));
+  }
+
+  async getReportedContent(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const [reports, total] = await this.reportRepository.findAndCount({
+      relations: ['post', 'reporter'],
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    return {
+      total,
+      page,
+      limit,
+      data: reports,
+    };
   }
 
   async moderateJob(jobId: string, status: 'approved' | 'rejected'): Promise<Job> {

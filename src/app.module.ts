@@ -11,7 +11,6 @@ import * as dotenv from 'dotenv';
 import { SavedPost } from './feed/entities/savedpost.entity';
 import { Post } from './post/entities/post.entity';
 import { UserModule } from './user/user.module';
-import { MessagingModule } from './messaging/messaging.module';
 import { JobModule } from './jobs/jobs.module';
 import { AntiSpamModule } from './anti-spam/anti-spam.module';
 import { Application } from './applications/entities/application.entity';
@@ -46,10 +45,6 @@ dotenv.config();
     UserModule,
     JobModule,
     AntiSpamModule,
-    MessagingModule,
- 
-    JobsModule,
-
     ApplicationsModule,
   ],
 })

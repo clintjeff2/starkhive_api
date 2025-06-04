@@ -40,6 +40,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AuthGuard } from '@nestjs/passport';
+import { AdminGuard } from './admin.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -108,76 +109,8 @@ async requestPasswordReset(@Body('email') email: string) {
     return this.authService.resetPassword(body.token, body.newPassword);
   }
 
-  // --- Portfolio Endpoints ---
-  @Post('portfolio')
-  @UseGuards(AuthGuardGuard)
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/portfolio',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + extname(file.originalname));
-      },
-    }),
-    limits: { fileSize: 5 * 1024 * 1024 },
-  }))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: CreatePortfolioDto })
-  async uploadPortfolio(
-    @Request() req,
-    @Body() body: CreatePortfolioDto,
-    @UploadedFile() file: any,
-  ) {
-    return this.authService.createPortfolio(req.user.id, body, file);
-  }
 
-  @Patch('portfolio/:id')
-  @UseGuards(AuthGuardGuard)
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads/portfolio',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + extname(file.originalname));
-      },
-    }),
-    limits: { fileSize: 5 * 1024 * 1024 },
-  }))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: CreatePortfolioDto })
-  async updatePortfolio(
-    @Request() req,
-    @Param('id') id: string,
-    @Body() body: Partial<CreatePortfolioDto>,
-    @UploadedFile() file?: any,
-  ) {
-    return this.authService.updatePortfolio(req.user.id, id, body, file);
-  }
-
-  @Delete('portfolio/:id')
-  @UseGuards(AuthGuardGuard)
-  async deletePortfolio(@Request() req, @Param('id') id: string) {
-    await this.authService.deletePortfolio(req.user.id, id);
-    return { message: 'Portfolio item deleted' };
-  }
-
-  @Get('portfolio')
-  @UseGuards(AuthGuardGuard)
-  async getUserPortfolios(@Request() req) {
-    return this.authService.getUserPortfolios(req.user.id);
-  }
-  @Get('admin/analytics')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @RoleDecorator(UserRole.ADMIN)
   async getAdminAnalytics() {
-    const postsStats = await this.feedService.getWeeklyNewPostsCount();
-    const jobsStats = await this.jobsService.getWeeklyNewJobsCount();
-    const applicationsStats = await this.jobsService.getWeeklyNewApplicationsCount();
-
-    return {
-      posts: postsStats,
-      jobs: jobsStats,
-      applications: applicationsStats,
-    };
+    return this.authService.getAdminAnalytics();
   }
 }
