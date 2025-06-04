@@ -47,6 +47,8 @@ dotenv.config();
     PostModule,
     JobModule,
     AntiSpamModule,
+    MessagingModule,
+    JobModule,
     ApplicationsModule,
   ],
 })

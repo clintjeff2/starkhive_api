@@ -12,6 +12,7 @@ import { MailService} from '../mail/mail.service';
 import { LogInProvider } from './providers/loginProvider';
 import { GenerateTokensProvider } from './providers/generateTokensProvider';
 import { Portfolio } from './entities/portfolio.entity';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, PasswordReset, Portfolio]),

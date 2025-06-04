@@ -7,6 +7,7 @@ import { Application } from 'src/applications/entities/application.entity';
 import { Job } from 'src/jobs/entities/job.entity';
 import { Comment } from 'src/feed/entities/comment.entity';
 
+
 @Entity()
 export class User {
   @ApiProperty({
