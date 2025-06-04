@@ -5,6 +5,7 @@ import { SavedPost } from './entities/savedpost.entity';
 import { Post } from '../post/entities/post.entity';
 import { CreateFeedDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
+import { Report } from './entities/report.entity';
 
 @Injectable()
 export class FeedService {
@@ -14,6 +15,9 @@ export class FeedService {
 
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
+
+    @InjectRepository(Report)
+    private readonly reportRepository: Repository<Report>,
   ) {}
 
   async toggleSavePost(postId: number, userId: number): Promise<{ message: string }> {
@@ -65,6 +69,22 @@ export class FeedService {
       week: r.week,
       count: parseInt(r.count, 10),
     }));
+  }
+
+  async getReportedContent(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const [reports, total] = await this.reportRepository.findAndCount({
+      relations: ['post', 'reporter'],
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+    return {
+      total,
+      page,
+      limit,
+      data: reports,
+    };
   }
 
   // Optional CRUD methods - adjust as needed

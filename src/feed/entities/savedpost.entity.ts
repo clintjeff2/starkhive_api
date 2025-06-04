@@ -7,7 +7,7 @@ export class SavedPost {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, (user) => user.savedPosts)
+  @ManyToOne(() => User, (user) => user.savedPosts, { nullable: false, eager: false })
   @JoinColumn({ name: 'userId' })
   user: User;
 
@@ -17,5 +17,4 @@ export class SavedPost {
 
   @CreateDateColumn()
   createdAt: Date;
-
 }

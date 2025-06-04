@@ -28,6 +28,7 @@ import { UserRole } from './enums/userRole.enum';
 import { RolesGuard } from './guards/role.guard';
 import { AuthGuardGuard } from './guards/auth.guard';
 import { AuthGuard } from '@nestjs/passport';
+import { AdminGuard } from './admin.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -78,19 +79,11 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() body: { token: string; newPassword: string }) {
     return this.authService.resetPassword(body.token, body.newPassword);
+  }
 
-  @Get('admin/analytics')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @RoleDecorator(UserRole.ADMIN)
+  @Get('analytics')
+  @UseGuards(AdminGuard)
   async getAdminAnalytics() {
-    const postsStats = await this.feedService.getWeeklyNewPostsCount();
-    const jobsStats = await this.jobsService.getWeeklyNewJobsCount();
-    const applicationsStats = await this.jobsService.getWeeklyNewApplicationsCount();
-
-    return {
-      posts: postsStats,
-      jobs: jobsStats,
-      applications: applicationsStats,
-    };
+    return this.authService.getAdminAnalytics();
   }
 }

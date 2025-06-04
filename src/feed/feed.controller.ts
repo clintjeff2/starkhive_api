@@ -17,6 +17,10 @@ import { CreateFeedDto, GetSavedPostsDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.strategy';
+import { Report } from './entities/report.entity';
+import { UserRole } from '../auth/enums/userRole.enum';
+import { RolesGuard } from '../auth/guards/role.guard';
+import { RoleDecorator } from '../auth/decorators/role.decorator';
 
 @Controller('feed')
 export class FeedController {
@@ -68,5 +72,16 @@ export class FeedController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.feedService.remove(+id);
+  }
+
+  @Get('reports')
+  @ApiBearerAuth('jwt-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RoleDecorator(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get paginated reported content for admin review' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Returns paginated reported content' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden' })
+  async getReportedContent(@Query('page') page = 1, @Query('limit') limit = 10) {
+    return this.feedService.getReportedContent(Number(page), Number(limit));
   }
 }
