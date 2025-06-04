@@ -3,11 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Job } from './entities/job.entity';
-import { Application } from './entities/application.entity';
+import { Application } from 'src/applications/entities/application.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
-import { CreateApplicationDto } from './dto/create-application.dto';
-import { UpdateApplicationDto } from './dto/update-application.dto';
+import { CreateApplicationDto } from 'src/applications/dto/create-application.dto'; 
+import { UpdateApplicationDto } from 'src/applications/dto/update-application.dto';
 
 import { AntiSpamService } from '../anti-spam/anti-spam.service';
 
@@ -74,7 +74,7 @@ export class JobsService {
   }
 
   async findApplicationById(id: number): Promise<Application> {
-    const application = await this.applicationRepository.findOne({ where: { id } });
+    const application = await this.applicationRepository.findOne({ where: { id: id.toString() } });
     if (!application) {
       throw new NotFoundException(`Application with ID ${id} not found`);
     }

@@ -35,4 +35,5 @@ export class User {
 
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
+  notifications: any;
 }
