@@ -1,11 +1,17 @@
 import {
   Body,
   Controller,
-  Get,
   HttpCode,
   HttpStatus,
   Post,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Request,
+  Get,
+  Param,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register-user.dto';
@@ -14,6 +20,7 @@ import { FeedService } from '../feed/feed.service';
 import { JobsService } from '../jobs/jobs.service';
 
 import { LoginDto } from './dto/login-user.dto';
+import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 
 import {
   ApiTags,
@@ -21,12 +28,17 @@ import {
   ApiResponse,
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 
 import { RoleDecorator } from './decorators/role.decorator';
 import { UserRole } from './enums/userRole.enum';
 import { RolesGuard } from './guards/role.guard';
 import { AuthGuardGuard } from './guards/auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminGuard } from './admin.guard';
 
@@ -72,17 +84,17 @@ export class AuthController {
   }
 
   @Post('request-password-reset')
-  async requestPasswordReset(@Body('email') email: string) {
-    return this.authService.sendPasswordResetEmail(email);
-  }
+async requestPasswordReset(@Body('email') email: string) {
+  return this.authService.sendPasswordResetEmail(email);
+}
+
 
   @Post('reset-password')
   async resetPassword(@Body() body: { token: string; newPassword: string }) {
     return this.authService.resetPassword(body.token, body.newPassword);
   }
 
-  @Get('analytics')
-  @UseGuards(AdminGuard)
+
   async getAdminAnalytics() {
     return this.authService.getAdminAnalytics();
   }

@@ -2,6 +2,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { UserRole } from '../enums/userRole.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { SavedPost } from 'src/feed/entities/savedpost.entity';
+import { Portfolio } from './portfolio.entity';
 
 @Entity()
 export class User {
@@ -35,4 +36,6 @@ export class User {
 
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
+  @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
+  portfolios: Portfolio[];
 }
