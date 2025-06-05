@@ -86,9 +86,15 @@ export class AuthService {
   async login(loginDto: LogInDto): Promise<string> {
     const { email, password } = loginDto;
     const user = await this.userRepository.findOneBy({ email: email });
+    
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid email or password');
     }
+
+    if (user.isSuspended) {
+      throw new UnauthorizedException('Your account has been suspended. Please contact support for assistance.');
+    }
+
     const payload = {
       sub: user.id,
       email: user.email,
@@ -220,6 +226,36 @@ export class AuthService {
         totalPages: Math.ceil(total / limit)
       }
     };
+  }
+
+  async suspendUser(adminId: string, targetUserId: string): Promise<User> {
+    // Get the admin user
+    const admin = await this.userRepository.findOne({ where: { id: adminId } });
+    if (!admin || (admin.role !== UserRole.ADMIN && admin.role !== UserRole.SUPER_ADMIN)) {
+      throw new UnauthorizedException('Only administrators can suspend users');
+    }
+
+    // Get the target user
+    const targetUser = await this.userRepository.findOne({ where: { id: targetUserId } });
+    if (!targetUser) {
+      throw new BadRequestException('Target user does not exist');
+    }
+
+    // Prevent suspending admins and super admins
+    if (targetUser.role === UserRole.ADMIN || targetUser.role === UserRole.SUPER_ADMIN) {
+      throw new BadRequestException('Cannot suspend administrators');
+    }
+
+    // Prevent self-suspension
+    if (adminId === targetUserId) {
+      throw new BadRequestException('Cannot suspend your own account');
+    }
+
+    // Toggle suspension status
+    targetUser.isSuspended = !targetUser.isSuspended;
+    await this.userRepository.save(targetUser);
+
+    return targetUser;
   }
 }
 
