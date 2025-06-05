@@ -25,16 +25,16 @@ import { ROLES_KEY } from '../decorators/role.decorator';
       const user = request.user; // Ensure user is attached to request (e.g., via JWT auth)
       console.log('User from request:', user);
   
-      if (!user || !user.userRole) {
+      if (!user || !user.role) {
         throw new ForbiddenException('Access denied: No role assigned');
       }
-  
+
       // Check if the user has at least one required role
-      const hasRequiredRoles = requiredRoles.includes(user.userRole);
+      const hasRequiredRoles = requiredRoles.includes(user.role);
       if (!hasRequiredRoles) {
         throw new ForbiddenException('Access denied: Insufficient role');
       }
-  
+
       return hasRequiredRoles;
     }
   } 

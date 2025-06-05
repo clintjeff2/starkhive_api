@@ -30,7 +30,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-import { RoleDecorator } from './decorators/role.decorator';
+import { Roles } from './decorators/role.decorator';
 import { UserRole } from './enums/userRole.enum';
 import { RolesGuard } from './guards/role.guard';
 import { AuthGuardGuard } from './guards/auth.guard';
@@ -50,7 +50,7 @@ export class AuthController {
    */
   @Patch('promote/:userId')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @RoleDecorator(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Promote a user to admin (super admin only)' })
   @ApiResponse({ status: 200, description: 'User promoted to admin' })
   @ApiUnauthorizedResponse({ description: 'Only super admins can promote users' })
@@ -88,7 +88,7 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ summary: 'Login with email and password' })
   
-  @RoleDecorator(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN)
   @UseGuards(AuthGuardGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Login successful, JWT returned' })
@@ -111,7 +111,4 @@ async requestPasswordReset(@Body('email') email: string) {
   }
 
 
-  async getAdminAnalytics() {
-    return this.authService.getAdminAnalytics();
-  }
 }

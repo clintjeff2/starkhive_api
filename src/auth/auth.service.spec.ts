@@ -4,14 +4,13 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { PasswordReset } from './entities/password-reset.entity';
 import { JwtService } from '@nestjs/jwt';
-import { UserService } from 'src/user/user.service';
+
 
 describe('AuthService', () => {
   let service: AuthService;
 
   const mockUserRepository = {};
   const mockPasswordResetRepository = {};
-  const mockUserService = {};
   const mockMailService = { sendEmail: jest.fn() };
 
   beforeEach(async () => {
@@ -29,10 +28,6 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: { sign: jest.fn().mockReturnValue('mock-token') },
-        },
-        {
-          provide: UserService,
-          useValue: mockUserService,
         },
         {
           provide: 'MAIL_SERVICE',
