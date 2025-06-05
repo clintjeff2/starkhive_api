@@ -170,6 +170,12 @@ export class FeedService {
     postId: string,
     userId: string,
   ): Promise<{ message: string }> {
+    // Validate post exists
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
     const existing = await this.likeRepository.findOne({
       where: {
         post: { id: postId },
@@ -191,7 +197,6 @@ export class FeedService {
     await this.likeRepository.save(like);
     return { message: 'Post liked' };
   }
-
   // Optional CRUD methods - adjust as needed
   create(createFeedDto: CreateFeedDto) {
     return 'This action adds a new feed';
