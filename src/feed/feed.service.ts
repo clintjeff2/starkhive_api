@@ -2,7 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SavedPost } from './entities/savedpost.entity';
-import { Post } from '../post/entities/post.entity';
+import { CreatePostDto } from './dto/create-post.dto';
+import { Post } from './entities/post.entity';
 import { Report } from './entities/report.entity';
 import { CreateFeedDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
@@ -15,6 +16,18 @@ import { User } from 'src/auth/entities/user.entity';
 
 @Injectable()
 export class FeedService {
+  async createFeedPost(user: User, dto: CreatePostDto): Promise<Post> {
+    if (!dto.content || dto.content.trim().length === 0) {
+      throw new Error('Post content is required');
+    }
+    const post = this.postRepository.create({
+      content: dto.content,
+      image: dto.image,
+      user,
+    });
+    return await this.postRepository.save(post);
+  }
+
   constructor(
     @InjectRepository(SavedPost)
     private readonly savedPostRepo: Repository<SavedPost>,
