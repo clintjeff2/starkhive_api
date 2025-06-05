@@ -10,7 +10,7 @@ import * as dotenv from 'dotenv';
 import { SavedPost } from './feed/entities/savedpost.entity';
 import { Post } from './post/entities/post.entity';
 import { MessagingModule } from './messaging/messaging.module';
-import { UserModule } from './user/user.module';
+
 import { JobModule } from './jobs/jobs.module';
 import { AntiSpamModule } from './anti-spam/anti-spam.module';
 import { Application } from './applications/entities/application.entity';

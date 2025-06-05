@@ -12,8 +12,6 @@ import { JobStatus } from './enums/job-status.enum';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { Comment } from './entities/comment.entity';
 import { User } from 'src/auth/entities/user.entity';
-import { Report } from './entities/report.entity';
-import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class FeedService {
@@ -158,20 +156,5 @@ export class FeedService {
     return `This action removes a #${id} feed`;
   }
 
-async getReportedContent(page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit;
-    const [reports, total] = await this.reportRepository.findAndCount({
-      relations: ['post', 'reporter'],
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
-    return {
-      total,
-      page,
-      limit,
-      data: reports,
-    };
-  }
 
 }

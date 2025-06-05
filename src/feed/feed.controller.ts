@@ -22,7 +22,7 @@ import { User } from 'src/auth/entities/user.entity';
 import { Report } from './entities/report.entity';
 import { UserRole } from '../auth/enums/userRole.enum';
 import { RolesGuard } from '../auth/guards/role.guard';
-import { RoleDecorator } from '../auth/decorators/role.decorator';
+import { Roles } from '../auth/decorators/role.decorator';
 
 interface AuthenticatedRequest extends Request {
   user: User;
@@ -94,7 +94,7 @@ async addComment(
   @Get('reports')
   @ApiBearerAuth('jwt-auth')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @RoleDecorator(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get paginated reported content for admin review' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Returns paginated reported content' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden' })

@@ -3,6 +3,7 @@ import { UserRole } from './enums/userRole.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import { Portfolio } from './entities/portfolio.entity';
 import * as bcrypt from 'bcryptjs';
 import { RegisterDto } from './dto/register-user.dto';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
@@ -18,6 +19,7 @@ import { LogInProvider } from './providers/loginProvider';
 
 @Injectable()
 export class AuthService {
+  /**
    * Promote a user to admin. Only super admins can perform this action.
    * @param requesterId - ID of the user making the request
    * @param targetUserId - ID of the user to be promoted
@@ -50,7 +52,7 @@ export class AuthService {
     @InjectRepository(Portfolio)
     private readonly portfolioRepository: Repository<Portfolio>,
     private readonly jwtService: JwtService,
-    private readonly usersService: UserService,
+    
     @InjectRepository(PasswordReset)
     private readonly passwordResetRepository: Repository<PasswordReset>,
     private readonly configService: ConfigService,
@@ -76,36 +78,12 @@ export class AuthService {
   }
 
   async getOneByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { email } });
+    return await this.userRepository.findOne({ where: { email } });
   }
   
-  async sendPasswordResetEmail(email: string): Promise<any> {
-    // implementation
-  }
-
-  async resetPassword(token: string, newPassword: string): Promise<any> {
-    // implementation
-  }
-
-  async createPortfolio(userId: string, body: any, file: any): Promise<any> {
-    // implementation
-  }
-
-  async updatePortfolio(userId: string, id: string, body: any, file: any): Promise<any> {
-    // implementation
-  }
-
-  async deletePortfolio(userId: string, id: string): Promise<any> {
-    // implementation
-  }
-
-  async getUserPortfolios(userId: string): Promise<any> {
-    // implementation
     
-  }
-  
 
-  async login(loginDto: LoginDto): Promise<string> {
+  async login(loginDto: LogInDto): Promise<string> {
     const { email, password } = loginDto;
     const user = await this.userRepository.findOneBy({ email: email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -201,10 +179,6 @@ export class AuthService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return await this.userRepository.findOne({ where: { email } });
-  }
-  
-  async getOneByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({ where: { email } });
   }
   
