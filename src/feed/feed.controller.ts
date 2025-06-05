@@ -30,6 +30,18 @@ interface AuthenticatedRequest extends Request {
 
 @Controller('feed')
 export class FeedController {
+  @Post('post')
+  @ApiBearerAuth('jwt-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create a new post (LinkedIn-style feed)' })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Post created successfully' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid post data' })
+  async createFeedPost(@Body() dto: import('./dto/create-post.dto').CreatePostDto, @Req() req: any) {
+    const user = req.user;
+    if (!user) throw new Error('Authentication required');
+    return await this.feedService.createFeedPost(user, dto);
+  }
+
   constructor(private readonly feedService: FeedService) {}
 
   @Post(':postId/save-toggle')

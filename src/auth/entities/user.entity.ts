@@ -2,6 +2,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { UserRole } from '../enums/userRole.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { SavedPost } from 'src/feed/entities/savedpost.entity';
+import { Post } from 'src/feed/entities/post.entity';
 import { Portfolio } from './portfolio.entity';
 import { Application } from 'src/applications/entities/application.entity';
 import { Job } from 'src/jobs/entities/job.entity';
@@ -48,6 +49,9 @@ export class User {
 
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolios: Portfolio[];
+
+  @OneToMany(() => Post, post => post.user)
+  posts: Post[];
 
   @OneToMany(() => Job, (job) => job.recruiter)
   jobs: Job [];
