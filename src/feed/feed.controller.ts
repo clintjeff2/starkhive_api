@@ -130,6 +130,16 @@ export class FeedController {
 
   @UseGuards(JwtAuthGuard)
   @Post(':postId/like-toggle')
+  @ApiBearerAuth('jwt-auth')
+  @ApiOperation({ summary: 'Toggle like status for a post' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Like status toggled successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Post not found',
+  })
   async toggleLike(@Param('postId') postId: string, @Req() req) {
     return await this.feedService.toggleLikePost(postId, req.user.id);
   }

@@ -4,11 +4,13 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   CreateDateColumn,
+  Unique,
 } from 'typeorm';
 import { Post } from '../../post/entities/post.entity';
 import { User } from '../../auth/entities/user.entity';
 
 @Entity()
+@Unique(['user', 'post'])
 export class Like {
   @PrimaryGeneratedColumn('uuid')
   id: string;
