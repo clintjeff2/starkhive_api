@@ -39,6 +39,42 @@ This repository (`starkhive_api`) is the backend powering authentication, job li
 * Ensure all changes pass linting and do not break existing tests.
 
 
+## 🔐 Role-Based Access Control (RBAC)
+
+This project uses role-based access control to secure endpoints for different user types: `Recruiter`, `Freelancer`, and `Admin`.
+
+### How to Protect Endpoints
+
+1. **Import Decorator and Guard:**
+   ```typescript
+   import { Roles } from '../auth/decorators/role.decorator';
+   import { RolesGuard } from '../auth/guards/role.guard';
+   import { JwtAuthGuard } from '../auth/guards/jwt.strategy';
+   import { UserRole } from '../auth/enums/userRole.enum';
+   ```
+2. **Apply to Controller Methods:**
+   ```typescript
+   @UseGuards(JwtAuthGuard, RolesGuard)
+   @Roles(UserRole.ADMIN)
+   @Get('admin-only')
+   getAdminData() {
+     // ...
+   }
+   ```
+3. **Multiple Roles:**
+   ```typescript
+   @Roles(UserRole.RECRUITER, UserRole.ADMIN)
+   ```
+
+- The user's role is stored in the `role` field of the `User` entity.
+- Unauthorized access is blocked automatically by the guard.
+
+### Best Practices
+- Always use `@Roles` and `RolesGuard` for sensitive or restricted endpoints.
+- Add clear comments when a route is protected by RBAC.
+- Review and update roles as new features and user types are added.
+
+
 ## 📢 Join the Community
 
 To stay connected and up-to-date:

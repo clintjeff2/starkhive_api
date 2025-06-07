@@ -6,15 +6,16 @@ import { User } from './entities/user.entity';
 import { Portfolio } from './entities/portfolio.entity';
 import * as bcrypt from 'bcryptjs';
 import { RegisterDto } from './dto/register-user.dto';
-import { LoginDto } from './dto/login-user.dto';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import { addMinutes } from 'date-fns';
-import { UserService } from 'src/user/user.service';
 import { PasswordReset } from './entities/password-reset.entity';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
+import { HashingProvider } from './providers/hashingProvider';
+import { LogInDto } from './dto/loginDto';
+import { LogInProvider } from './providers/loginProvider';
 
 @Injectable()
 export class AuthService {
@@ -43,35 +44,46 @@ export class AuthService {
   // TODO: Move allowedMimeTypes and maxFileSize to configuration
   private allowedMimeTypes: string[];
   private maxFileSize: number;
-  
+ 
   constructor(
-  private readonly mailService: MailService,
-  @InjectRepository(User)
-  private readonly userRepository: Repository<User>,
-  @InjectRepository(Portfolio)
-  private readonly portfolioRepository: Repository<Portfolio>,
-  private readonly jwtService: JwtService,
-  private readonly usersService: UserService,
-  @InjectRepository(PasswordReset)
-  private readonly passwordResetRepository: Repository<PasswordReset>,
-  private readonly configService: ConfigService,
+    private readonly mailService: MailService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(Portfolio)
+    private readonly portfolioRepository: Repository<Portfolio>,
+    private readonly jwtService: JwtService,
+    
+    @InjectRepository(PasswordReset)
+    private readonly passwordResetRepository: Repository<PasswordReset>,
+    private readonly configService: ConfigService,
+    private readonly loginProvider: LogInProvider
   ) {
-  this.allowedMimeTypes = this.configService.get<string[]>('portfolio.allowedMimeTypes', ['image/jpeg', 'image/png', 'application/pdf']);
-  this.maxFileSize = this.configService.get<number>('portfolio.maxFileSize', 5 * 1024 * 1024);
+    this.allowedMimeTypes = this.configService.get<string[]>('portfolio.allowedMimeTypes', ['image/jpeg', 'image/png', 'application/pdf']);
+    this.maxFileSize = this.configService.get<number>('portfolio.maxFileSize', 5 * 1024 * 1024);
   }
 
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
     const { email, password, role } = registerDto;
+  
     const existing = await this.userRepository.findOne({ where: { email } });
     if (existing) throw new Error('Email already exists');
+  
     const hashed = await bcrypt.hash(password, 10);
+  
     const user = this.userRepository.create({ email, password: hashed, role });
     const saved = await this.userRepository.save(user);
+  
     const { password: _, ...safeUser } = saved;
     return safeUser;
   }
 
-  async login(loginDto: LoginDto): Promise<string> {
+  async getOneByEmail(email: string): Promise<User | null> {
+    return await this.userRepository.findOne({ where: { email } });
+  }
+  
+    
+
+  async login(loginDto: LogInDto): Promise<string> {
     const { email, password } = loginDto;
     const user = await this.userRepository.findOneBy({ email: email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -80,13 +92,13 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role
     };
     return this.jwtService.sign(payload);
   }
 
   public async sendPasswordResetEmail(email: string): Promise<void> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.userRepository.findOne({ where: { email } });
     if (!user) return; // don't reveal user existence
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = addMinutes(new Date(), 15);
@@ -165,4 +177,10 @@ export class AuthService {
   async getUserPortfolios(userId: string): Promise<Portfolio[]> {
     return this.portfolioRepository.find({ where: { user: { id: userId } }, order: { createdAt: 'DESC' } });
   }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return await this.userRepository.findOne({ where: { email } });
+  }
+  
 }
+

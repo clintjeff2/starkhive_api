@@ -6,13 +6,16 @@ import { User } from './entities/user.entity';
 import { HashingProvider } from './providers/hashingProvider';
 import { BcryptProvider } from './providers/bcrypt';
 import { PasswordReset } from './entities/password-reset.entity';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailService} from '../mail/mail.service';
+import { LogInProvider } from './providers/loginProvider';
+import { GenerateTokensProvider } from './providers/generateTokensProvider';
+import { Portfolio } from './entities/portfolio.entity';
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, PasswordReset]),
-
+    TypeOrmModule.forFeature([User, PasswordReset, Portfolio]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -27,9 +30,12 @@ import { MailService} from '../mail/mail.service';
         };
       },
     }),
-  ],
+  ],  
   providers: [
     AuthService,
+    LogInProvider,
+    GenerateTokensProvider,
+    JwtService,
     MailService,
     {
       provide: HashingProvider, // Use the abstract class as a token
@@ -37,6 +43,6 @@ import { MailService} from '../mail/mail.service';
     },
   ],
   controllers: [AuthController],
-  exports: [AuthService, TypeOrmModule, HashingProvider],
+  exports: [AuthService, TypeOrmModule, HashingProvider, MailService, JwtService, GenerateTokensProvider],
 })
 export class AuthModule {}

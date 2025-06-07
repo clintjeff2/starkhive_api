@@ -9,6 +9,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LogInDto } from '../dto/loginDto';
 import { HashingProvider } from './hashingProvider';
 import { GenerateTokensProvider } from './generateTokensProvider';
+import { AuthService } from '../auth.service';
 
 /**
  * Signin provider class
@@ -20,13 +21,12 @@ export class LogInProvider {
     /**
      * Injecting UserService repository
      */
-    @Inject(forwardRef(() => userService))
-    private readonly userService: UserService,
-
     /**
      * Injecting hashing dependency
      */
     private readonly hashingProvider: HashingProvider,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
 
     /**
      * Injecting GenerateTokensProvider
@@ -45,7 +45,8 @@ export class LogInProvider {
   @ApiResponse({ status: 408, description: 'Database connection timeout' })
   public async Login(loginDto: LogInDto) {
     // Check if user exists in database
-    const user = await this.userService.GetOneByEmail(loginDto.email);
+    const user = await this.authService.getOneByEmail(loginDto.email);
+
 
     if (!user) {
       throw new UnauthorizedException('email or password is incorrect');
