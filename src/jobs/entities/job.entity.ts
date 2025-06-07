@@ -1,5 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
-import { JobStatus } from '../dto/update-status.dto';
+import { Application } from 'src/applications/entities/application.entity';
+import { User } from 'src/auth/entities/user.entity';
+import { JobStatus } from 'src/feed/enums/job-status.enum';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity()
 export class Job {
@@ -25,11 +27,30 @@ export class Job {
   })
   status: JobStatus;
 
+  @OneToMany(() => Application, (application) => application.job)
+  applications: Application[];
+
   @Column()
   ownerId: number;
 
+  @ManyToOne(() => User, (user) => user.jobs, { eager: false })
+  @JoinColumn({ name: 'recruiterId' })
+  recruiter: User;
+
+  @Column()
+  recruiterId: string;
+
+
   @CreateDateColumn()
   createdAt: Date;
+feature/toggle-job-applications
+
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @Column({ nullable: true })
+main
   freelancer: any;
 }
  

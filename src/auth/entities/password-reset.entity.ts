@@ -1,7 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
 import { User } from './user.entity';
 
-
 @Entity()
 export class PasswordReset {
   @PrimaryGeneratedColumn('uuid')
@@ -18,7 +17,4 @@ export class PasswordReset {
 
   @Column({ type: 'timestamp' })
   expiresAt: Date;
-
-  @Column()
-   email: string
 }

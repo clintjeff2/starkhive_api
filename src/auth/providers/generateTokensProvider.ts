@@ -1,73 +1,61 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigType } from '@nestjs/config';
-import jwtConfig from '../authconfig/jwt.config';
+import { ConfigService } from '@nestjs/config';
+import { User } from '../entities/user.entity';
 
-/**
- * Generate token provider
- */
-@ApiTags('Auth')
 @Injectable()
 export class GenerateTokensProvider {
   constructor(
-    /**
-     * Injecting UserService repository
-     */
-    @Inject(forwardRef(() => UserService))
-    private readonly userService: UserService,
-
-    /**
-     * Injecting JwtService for token management
-     */
     private readonly jwtService: JwtService,
-
-    /**
-     * Injecting JWT configuration
-     */
-    @Inject(jwtConfig.KEY)
-    private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
+    private readonly configService: ConfigService,
   ) {}
 
-  /**
-   * Signs a token for a user
-   * @param userId - The ID of the user
-   * @param expiresIn - Token expiration time
-   * @param payload - Optional additional payload
-   * @returns A signed JWT token
-   */
-  @ApiOperation({ summary: 'Sign JWT Token' })
-  public async signToken<T>(userId: number, userRole, expiresIn: number, payload?: T) {
-    return await this.jwtService.signAsync(
+  private get jwtConfiguration() {
+    return {
+      secret: this.configService.get<string>('JWT_SECRET') || 'defaultSecret',
+      ttl: this.configService.get<string>('JWT_TTL') || '1h',
+    };
+  }
+
+  private signToken(
+    userId: string,
+    role: string,
+    expiresIn: string,
+    payload?: Record<string, any>,
+  ): string {
+    return this.jwtService.sign(
       {
         sub: userId,
-        userRole,
+        role,
         ...payload,
       },
       {
         secret: this.jwtConfiguration.secret,
-        audience: this.jwtConfiguration.audience,
-        issuer: this.jwtConfiguration.issuer,
         expiresIn,
       },
     );
   }
 
-  /**
-   * Generates access and refresh tokens for a user
-   * @param user - The user entity
-   * @returns An object containing access and refresh tokens
-   */
-  @ApiOperation({ summary: 'Generate Access and Refresh Tokens' })
-  public async generateTokens(user: User) {
-    const [accessToken, refreshToken] = await Promise.all([
-      // Generate access token
-      this.signToken(user.id, user.userRole, this.jwtConfiguration.ttl, { email: user.email }),
+  async generateTokens(user: User): Promise<{
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    const accessToken = this.signToken(
+      user.id,
+      user.role,
+      this.jwtConfiguration.ttl,
+      { email: user.email },
+    );
 
-      // Generate refresh token
-      this.signToken(user.id, user.userRole, this.jwtConfiguration.ttl)
-    ]);
-    
-    return { accessToken, refreshToken, user };
+    const refreshToken = this.signToken(
+      user.id,
+      user.role,
+      this.configService.get<string>('JWT_REFRESH_TTL') || '7d', // fallback to 7 days
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+    };
   }
 }
