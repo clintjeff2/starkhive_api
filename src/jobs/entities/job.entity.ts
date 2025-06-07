@@ -15,6 +15,12 @@ export class Job {
   @Column({ default: false })
   isFlagged: boolean;
 
+  @Column('decimal', { nullable: true })
+  budget?: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deadline?: Date;
+
   @Column({ default: true })
   isAcceptingApplications: boolean;
 

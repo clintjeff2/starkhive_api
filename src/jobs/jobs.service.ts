@@ -50,9 +50,18 @@ export class JobsService {
     return job;
   }
 
-  async updateJob(id: number, updateJobDto: UpdateJobDto): Promise<Job> {
+  async updateJob(id: number, updateJobDto: UpdateJobDto, userId: number): Promise<Job> {
     const job = await this.findJobById(id);
+    
+    // Check if the user is the owner of the job
+    if (job.ownerId !== userId) {
+      throw new ForbiddenException('Only the job owner can update this job');
+    }
+    
+    // Update only the provided fields
     Object.assign(job, updateJobDto);
+    
+    // Save the updated job
     return this.jobRepository.save(job);
   }
 
