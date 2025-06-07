@@ -15,6 +15,9 @@ export class Job {
   @Column({ default: false })
   isFlagged: boolean;
 
+  @Column({ default: true })
+  isAcceptingApplications: boolean;
+
   @Column({
     type: 'enum',
     enum: JobStatus,
@@ -27,7 +30,6 @@ export class Job {
 
   @CreateDateColumn()
   createdAt: Date;
-  status: string;
   freelancer: any;
 }
  
