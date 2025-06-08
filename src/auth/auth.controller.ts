@@ -8,7 +8,7 @@ import {
   // UseInterceptors,
   // UploadedFile,
   Request,
-  // Get,
+  Get,
   Param,
   Patch,
   Delete,
@@ -196,7 +196,6 @@ export class AuthController {
       type: 'object',
       properties: {
         id: { type: 'string', example: 'uuid-string' },
-        username: { type: 'string', example: 'recruiter_username' },
         role: { type: 'string', example: 'RECRUITER' },
         createdAt: { type: 'string', format: 'date-time' },
       },
