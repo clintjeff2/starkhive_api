@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not, IsNull, DataSource } from 'typeorm';
 
 import { Job } from './entities/job.entity';
 import { Application } from 'src/applications/entities/application.entity';
@@ -22,6 +22,8 @@ export class JobsService {
     private readonly applicationRepository: Repository<Application>,
 
     private readonly antiSpamService: AntiSpamService,
+    @Inject(DataSource)
+    private dataSource: DataSource,
   ) {}
 
   // Job CRUD with anti-spam check on create
@@ -38,15 +40,30 @@ export class JobsService {
     return saved;
   }
 
-  async findAllJobs(): Promise<Job[]> {
-    return this.jobRepository.find({ order: { createdAt: 'DESC' } });
+  async findAllJobs(includeDeleted: boolean = false): Promise<Job[]> {
+    const query = this.jobRepository.createQueryBuilder('job')
+      .orderBy('job.createdAt', 'DESC');
+
+    if (!includeDeleted) {
+      query.andWhere('job.deletedAt IS NULL');
+    }
+
+    return query.getMany();
   }
 
-  async findJobById(id: number): Promise<Job> {
-    const job = await this.jobRepository.findOne({ where: { id } });
+  async findJobById(id: number, includeDeleted: boolean = false): Promise<Job> {
+    const query = this.jobRepository.createQueryBuilder('job')
+      .where('job.id = :id', { id });
+
+    if (!includeDeleted) {
+      query.andWhere('job.deletedAt IS NULL');
+    }
+    
+    const job = await query.getOne();
     if (!job) {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
+    
     return job;
   }
 
@@ -56,12 +73,42 @@ export class JobsService {
     return this.jobRepository.save(job);
   }
 
-  async removeJob(id: number): Promise<{ message: string }> {
-    const result = await this.jobRepository.delete(id);
-    if (result.affected === 0) {
+  async removeJob(id: number, userId: number): Promise<{ message: string }> {
+    const job = await this.findJobById(id);
+    // Check if the user is the owner of the job
+    if (job.ownerId !== userId) {
+      throw new ForbiddenException('Only the job owner can delete this job');
+    }
+    
+    // Soft delete the job using TypeORM's softDelete
+    await this.jobRepository.softDelete(id);
+    
+    return { message: 'Job deleted successfully' };
+  }
+  
+  async restoreJob(id: number, userId: number): Promise<{ message: string }> {
+    const job = await this.jobRepository.findOne({
+      where: { id },
+      withDeleted: true
+    });
+
+    if (!job) {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
-    return { message: 'Job removed successfully' };
+
+    if (!job.deletedAt) {
+      throw new NotFoundException('Job is not deleted');
+    }
+    
+    // Check if the user is the owner of the job
+    if (job.ownerId !== userId) {
+      throw new ForbiddenException('Only the job owner can restore this job');
+    }
+    
+    // Restore the job
+    await this.jobRepository.restore(id);
+    
+    return { message: 'Job restored successfully' };
   }
 
   // Application CRUD
@@ -100,14 +147,19 @@ export class JobsService {
   }
 
   // Weekly analytics for jobs
-  async getWeeklyNewJobsCount(): Promise<Array<{ week: string; count: number }>> {
-    const raw = await this.jobRepository
+  async getWeeklyNewJobsCount(includeDeleted: boolean = false): Promise<Array<{ week: string; count: number }>> {
+    const query = this.jobRepository
       .createQueryBuilder('job')
       .select(`TO_CHAR(DATE_TRUNC('week', job."createdAt"), 'YYYY-MM-DD')`, 'week')
       .addSelect('COUNT(*)', 'count')
-      .groupBy(`DATE_TRUNC('week', job."createdAt")`)
-      .orderBy(`DATE_TRUNC('week', job."createdAt")`, 'DESC')
-      .getRawMany<{ week: string; count: string }>();
+      .groupBy('1')
+      .orderBy('1', 'DESC');
+      
+    if (!includeDeleted) {
+      query.andWhere('job.deletedAt IS NULL');
+    }
+    
+    const raw = await query.getRawMany<{ week: string; count: string }>();
 
     return raw.map(r => ({
       week: r.week,
