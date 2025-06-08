@@ -9,6 +9,7 @@ import * as bcrypt from 'bcryptjs';
 import { RegisterDto } from './dto/register-user.dto';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { JwtService } from '@nestjs/jwt';
+import { addMinutes } from 'date-fns';
 import * as crypto from 'crypto';
 import { addHours } from 'date-fns';
 import { PasswordReset } from './entities/password-reset.entity';
@@ -191,7 +192,7 @@ export class AuthService {
     await this.mailService.sendEmail({
       to: user.email,
       subject: 'Password Reset Request',
-      body: `Click the link to reset your password: ${resetLink}`,
+      html: `Click the link to reset your password: <a href="${resetLink}">${resetLink}</a>`,
     });
   }
 

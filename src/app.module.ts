@@ -15,9 +15,12 @@ import { JobModule } from './jobs/jobs.module';
 import { AntiSpamModule } from './anti-spam/anti-spam.module';
 import { Application } from './applications/entities/application.entity';
 import { ApplicationsModule } from './applications/applications.module';
+import { AdminModule } from './admin/admin.module';
+import { ReportsModule } from './reports/reports.module';
 import { Comment } from './feed/entities/comment.entity';
 import { Job } from './jobs/entities/job.entity';
 import { Portfolio } from './auth/entities/portfolio.entity';
+import { Report } from './reports/entities/report.entity';
 
 dotenv.config();
 
@@ -37,7 +40,17 @@ dotenv.config();
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, SavedPost, Post, Application, Message, Comment, Job, Portfolio],
+        entities: [
+          User, 
+          SavedPost, 
+          Post, 
+          Application, 
+          Message, 
+          Comment, 
+          Job, 
+          Portfolio,
+          Report
+        ],
         synchronize: true, // or false in production
       }),
     }),
@@ -48,7 +61,8 @@ dotenv.config();
     JobModule,
     AntiSpamModule,
     MessagingModule,
-    JobModule,
+    AdminModule,
+    ReportsModule,
     ApplicationsModule,
   ],
 })

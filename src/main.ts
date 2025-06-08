@@ -1,4 +1,5 @@
 import { NestFactory, Reflector } from '@nestjs/core';
+import { NestApplication } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ClassSerializerInterceptor, Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -16,7 +17,7 @@ const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
   // Create the application with logger
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
@@ -32,7 +33,7 @@ async function bootstrap() {
   // Trust proxy if behind a reverse proxy (e.g., Nginx, Heroku, etc.)
   const trustProxy = configService.get('TRUST_PROXY', 'false').toLowerCase() === 'true';
   if (trustProxy) {
-    app.set('trust proxy', 1);
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
   }
 
   // CORS Configuration
