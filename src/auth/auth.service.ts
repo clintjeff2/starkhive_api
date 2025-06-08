@@ -19,7 +19,6 @@ import { addHours } from 'date-fns';
 import { PasswordReset } from './entities/password-reset.entity';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
-// import { HashingProvider } from './providers/hashingProvider';
 import { LogInDto } from './dto/loginDto';
 import { LogInProvider } from './providers/loginProvider';
 
@@ -95,7 +94,7 @@ export class AuthService {
   
     const hashed = await bcrypt.hash(password, 10);
   
-    const user = this.userRepository.create({ 
+    const user = this.userRepository.create({
       email, 
       password: hashed, 
       role,
