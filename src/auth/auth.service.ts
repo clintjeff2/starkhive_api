@@ -410,7 +410,7 @@ export class AuthService {
         id: recruiterId,
         role: UserRole.RECRUITER,
       },
-      select: ['id', 'email', 'username', 'role', 'createdAt'],
+      select: ['id', 'email', 'role', 'createdAt'],
     });
 
     if (!recruiter) {
@@ -420,7 +420,6 @@ export class AuthService {
     // Return only public information
     return {
       id: recruiter.id,
-      username: recruiter.username,
       role: recruiter.role,
       createdAt: recruiter.createdAt,
     };
