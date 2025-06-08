@@ -17,18 +17,6 @@ import { Like } from './entities/like.entity';
 
 @Injectable()
 export class FeedService {
-  async createFeedPost(user: User, dto: CreatePostDto): Promise<Post> {
-    if (!dto.content || dto.content.trim().length === 0) {
-      throw new Error('Post content is required');
-    }
-    const post = this.postRepository.create({
-      content: dto.content,
-      image: dto.image,
-      user,
-    });
-    return await this.postRepository.save(post);
-  }
-
   constructor(
     @InjectRepository(SavedPost)
     private readonly savedPostRepo: Repository<SavedPost>,
@@ -50,6 +38,18 @@ export class FeedService {
     @InjectRepository(Like)
     private readonly likeRepository: Repository<Like>,
   ) {}
+
+  async createFeedPost(user: User, dto: CreatePostDto): Promise<Post> {
+    if (!dto.content || dto.content.trim().length === 0) {
+      throw new Error('Post content is required');
+    }
+    const post = this.postRepository.create({
+      content: dto.content,
+      image: dto.image,
+      user,
+    });
+    return await this.postRepository.save(post);
+  }
 
   async toggleSavePost(
     postId: number,

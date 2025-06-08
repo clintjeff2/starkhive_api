@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 import { UserRole } from '../enums/userRole.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { SavedPost } from '../../feed/entities/savedpost.entity';
@@ -8,6 +8,7 @@ import { Application } from '../../applications/entities/application.entity';
 import { Job } from '../../jobs/entities/job.entity';
 import { Comment } from '../../feed/entities/comment.entity';
 import { Like } from '../../feed/entities/like.entity';
+import { EmailToken } from './email-token.entity';
 
 @Entity()
 export class User {
@@ -61,4 +62,21 @@ export class User {
 
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];
+
+  @ApiProperty({
+    description: 'Whether the user has verified their email',
+    example: false,
+  })
+  @Column({ default: false })
+  isEmailVerified: boolean;
+
+  @OneToMany(() => EmailToken, (emailToken) => emailToken.user)
+  emailTokens: EmailToken[];
+
+  @ApiProperty({
+    description: 'The date when the user was created',
+    example: '2023-01-01T00:00:00.000Z',
+  })
+  @CreateDateColumn()
+  createdAt: Date;
 }

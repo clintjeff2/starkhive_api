@@ -2,18 +2,20 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { UserRole } from './enums/userRole.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Portfolio } from './entities/portfolio.entity';
+import { EmailToken } from './entities/email-token.entity';
 import * as bcrypt from 'bcryptjs';
 import { RegisterDto } from './dto/register-user.dto';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
-import { addMinutes } from 'date-fns';
+import { addHours } from 'date-fns';
 import { PasswordReset } from './entities/password-reset.entity';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
@@ -56,7 +58,8 @@ export class AuthService {
 
   // TODO: Move allowedMimeTypes and maxFileSize to configuration
   private allowedMimeTypes: string[];
-  private maxFileSize: number;
+  private maxFileSize: number; 
+  private readonly EMAIL_TOKEN_EXPIRATION_HOURS = 24; // 24 hours
 
   constructor(
     private readonly mailService: MailService,
@@ -64,6 +67,8 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Portfolio)
     private readonly portfolioRepository: Repository<Portfolio>,
+    @InjectRepository(EmailToken)
+    private readonly emailTokenRepository: Repository<EmailToken>,
     private readonly jwtService: JwtService,
 
     @InjectRepository(PasswordReset)
@@ -85,15 +90,95 @@ export class AuthService {
     const { email, password, role } = registerDto;
 
     const existing = await this.userRepository.findOne({ where: { email } });
-    if (existing) throw new Error('Email already exists');
 
+    if (existing) throw new BadRequestException('Email already exists');
+  
     const hashed = await bcrypt.hash(password, 10);
-
-    const user = this.userRepository.create({ email, password: hashed, role });
+  
+    const user = this.userRepository.create({ 
+      email, 
+      password: hashed, 
+      role,
+      isEmailVerified: false 
+    });
+    
     const saved = await this.userRepository.save(user);
-
+    await this.sendVerificationEmail(user.email);
+  
     const { password: _, ...safeUser } = saved;
     return safeUser;
+  }
+
+  async sendVerificationEmail(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Invalidate any existing tokens
+    await this.emailTokenRepository.update(
+      { userId: user.id, used: false },
+      { used: true }
+    );
+
+    // Generate new token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = addHours(new Date(), this.EMAIL_TOKEN_EXPIRATION_HOURS);
+
+    // Save token
+    const emailToken = this.emailTokenRepository.create({
+      token,
+      expiresAt,
+      user,
+      used: false
+    });
+
+    await this.emailTokenRepository.save(emailToken);
+
+    // Send verification email
+    const verificationUrl = `${this.configService.get('FRONTEND_URL')}/verify-email?token=${token}`;
+    await this.mailService.sendVerificationEmail(user.email, verificationUrl);
+  }
+
+  async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
+    const emailToken = await this.emailTokenRepository.findOne({
+      where: { token, used: false },
+      relations: ['user']
+    });
+
+    if (!emailToken) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    const now = new Date();
+    if (emailToken.expiresAt < now) {
+      throw new BadRequestException('Verification token has expired');
+    }
+
+    // Mark token as used
+    emailToken.used = true;
+    await this.emailTokenRepository.save(emailToken);
+
+    // Update user's email verification status
+    await this.userRepository.update(emailToken.userId, { isEmailVerified: true });
+
+    return {
+      success: true,
+      message: 'Email verified successfully. You can now log in.'
+    };
+  }
+
+  async resendVerificationEmail(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    await this.sendVerificationEmail(email);
   }
 
   async getOneByEmail(email: string): Promise<User | null> {
@@ -223,5 +308,45 @@ export class AuthService {
 
   async findByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({ where: { email } });
+  }
+  
+  async getUsersWithFilters(page: number, limit: number, role?: UserRole, isSuspended?: boolean) {
+    const skip = (page - 1) * limit;
+    
+    const queryBuilder = this.userRepository
+      .createQueryBuilder('user')
+      .select([
+        'user.id',
+        'user.email',
+        'user.username',
+        'user.role',
+        'user.isSuspended',
+        'user.createdAt',
+        'user.updatedAt'
+      ]);
+
+    if (role) {
+      queryBuilder.andWhere('user.role = :role', { role });
+    }
+
+    if (isSuspended !== undefined) {
+      queryBuilder.andWhere('user.isSuspended = :isSuspended', { isSuspended });
+    }
+
+    const [users, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .orderBy('user.createdAt', 'DESC')
+      .getManyAndCount();
+
+    return {
+      users,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 }
