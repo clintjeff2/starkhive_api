@@ -57,7 +57,7 @@ export class AuthService {
 
   // TODO: Move allowedMimeTypes and maxFileSize to configuration
   private allowedMimeTypes: string[];
-  private maxFileSize: number; 
+  private maxFileSize: number;
   private readonly EMAIL_TOKEN_EXPIRATION_HOURS = 24; // 24 hours
 
   constructor(
@@ -91,19 +91,19 @@ export class AuthService {
     const existing = await this.userRepository.findOne({ where: { email } });
 
     if (existing) throw new BadRequestException('Email already exists');
-  
+
     const hashed = await bcrypt.hash(password, 10);
-  
+
     const user = this.userRepository.create({
-      email, 
-      password: hashed, 
+      email,
+      password: hashed,
       role,
-      isEmailVerified: false 
+      isEmailVerified: false,
     });
-    
+
     const saved = await this.userRepository.save(user);
     await this.sendVerificationEmail(user.email);
-  
+
     const { password: _, ...safeUser } = saved;
     return safeUser;
   }
@@ -117,7 +117,7 @@ export class AuthService {
     // Invalidate any existing tokens
     await this.emailTokenRepository.update(
       { userId: user.id, used: false },
-      { used: true }
+      { used: true },
     );
 
     // Generate new token
@@ -129,7 +129,7 @@ export class AuthService {
       token,
       expiresAt,
       user,
-      used: false
+      used: false,
     });
 
     await this.emailTokenRepository.save(emailToken);
@@ -139,10 +139,12 @@ export class AuthService {
     await this.mailService.sendVerificationEmail(user.email, verificationUrl);
   }
 
-  async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
+  async verifyEmail(
+    token: string,
+  ): Promise<{ success: boolean; message: string }> {
     const emailToken = await this.emailTokenRepository.findOne({
       where: { token, used: false },
-      relations: ['user']
+      relations: ['user'],
     });
 
     if (!emailToken) {
@@ -159,11 +161,13 @@ export class AuthService {
     await this.emailTokenRepository.save(emailToken);
 
     // Update user's email verification status
-    await this.userRepository.update(emailToken.userId, { isEmailVerified: true });
+    await this.userRepository.update(emailToken.userId, {
+      isEmailVerified: true,
+    });
 
     return {
       success: true,
-      message: 'Email verified successfully. You can now log in.'
+      message: 'Email verified successfully. You can now log in.',
     };
   }
 
@@ -187,13 +191,15 @@ export class AuthService {
   async login(loginDto: LogInDto): Promise<string> {
     const { email, password } = loginDto;
     const user = await this.userRepository.findOneBy({ email: email });
-    
+
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
     if (user.isSuspended) {
-      throw new UnauthorizedException('Your account has been suspended. Please contact support for assistance.');
+      throw new UnauthorizedException(
+        'Your account has been suspended. Please contact support for assistance.',
+      );
     }
 
     const payload = {
@@ -314,10 +320,15 @@ export class AuthService {
   async findByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({ where: { email } });
   }
-  
-  async getUsersWithFilters(page: number, limit: number, role?: UserRole, isSuspended?: boolean) {
+
+  async getUsersWithFilters(
+    page: number,
+    limit: number,
+    role?: UserRole,
+    isSuspended?: boolean,
+  ) {
     const skip = (page - 1) * limit;
-    
+
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
       .select([
@@ -327,7 +338,7 @@ export class AuthService {
         'user.role',
         'user.isSuspended',
         'user.createdAt',
-        'user.updatedAt'
+        'user.updatedAt',
       ]);
 
     if (role) {
@@ -350,26 +361,34 @@ export class AuthService {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
   async suspendUser(adminId: string, targetUserId: string): Promise<User> {
     // Get the admin user
     const admin = await this.userRepository.findOne({ where: { id: adminId } });
-    if (!admin || (admin.role !== UserRole.ADMIN && admin.role !== UserRole.SUPER_ADMIN)) {
+    if (
+      !admin ||
+      (admin.role !== UserRole.ADMIN && admin.role !== UserRole.SUPER_ADMIN)
+    ) {
       throw new UnauthorizedException('Only administrators can suspend users');
     }
 
     // Get the target user
-    const targetUser = await this.userRepository.findOne({ where: { id: targetUserId } });
+    const targetUser = await this.userRepository.findOne({
+      where: { id: targetUserId },
+    });
     if (!targetUser) {
       throw new BadRequestException('Target user does not exist');
     }
 
     // Prevent suspending admins and super admins
-    if (targetUser.role === UserRole.ADMIN || targetUser.role === UserRole.SUPER_ADMIN) {
+    if (
+      targetUser.role === UserRole.ADMIN ||
+      targetUser.role === UserRole.SUPER_ADMIN
+    ) {
       throw new BadRequestException('Cannot suspend administrators');
     }
 
@@ -383,5 +402,26 @@ export class AuthService {
     await this.userRepository.save(targetUser);
 
     return targetUser;
+  }
+
+  async getPublicRecruiterProfile(recruiterId: string): Promise<Partial<User>> {
+    const recruiter = await this.userRepository.findOne({
+      where: {
+        id: recruiterId,
+        role: UserRole.RECRUITER,
+      },
+      select: ['id', 'email', 'role', 'createdAt'],
+    });
+
+    if (!recruiter) {
+      throw new NotFoundException('Recruiter not found');
+    }
+
+    // Return only public information
+    return {
+      id: recruiter.id,
+      role: recruiter.role,
+      createdAt: recruiter.createdAt,
+    };
   }
 }
