@@ -10,6 +10,10 @@ import {
 import { JobsService } from './jobs.service';
 import { UpdateJobStatusDto } from './dto/update-status.dto';
 import { CreateJobDto } from './dto/create-job.dto';
+feature/job-edit-budget-deadline
+import { UpdateJobDto } from './dto/update-job.dto';
+// TODO: Import AuthGuard once authentication is implemented
+
 import { Request as ExpressRequest } from 'express';
 
 interface RequestWithUser extends ExpressRequest {
@@ -17,6 +21,7 @@ interface RequestWithUser extends ExpressRequest {
     id: string;
   };
 }
+main
 
 @Controller('jobs')
 export class JobsController {
@@ -44,6 +49,30 @@ export class JobsController {
     return this.jobsService.updateJobStatus(+id, updateStatusDto, userId);
   }
 
+feature/job-edit-budget-deadline
+  @Patch(':id/toggle-applications')
+  // TODO: Add @UseGuards(AuthGuard) once authentication is implemented
+  async toggleAcceptingApplications(
+    @Param('id') id: string,
+    @Body('isAcceptingApplications') isAcceptingApplications: boolean,
+    // TODO: Add @Request() req once authentication is implemented
+  ) {
+    // TODO: Get userId from request once authentication is implemented
+    const userId = 1; // Placeholder
+    return this.jobsService.toggleAcceptingApplications(+id, isAcceptingApplications, userId);
+  }
+
+  @Patch(':id')
+  // TODO: Add @UseGuards(AuthGuard) once authentication is implemented
+  async updateJob(
+    @Param('id') id: string,
+    @Body() updateJobDto: UpdateJobDto,
+    // TODO: Add @Request() req once authentication is implemented
+  ) {
+    // TODO: Get userId from request once authentication is implemented
+    const userId = 1; // Placeholder
+    return this.jobsService.updateJob(+id, updateJobDto, userId);
+
   @Post(':id/save')
   // TODO: Add @UseGuards(AuthGuard) once authentication is implemented
   async toggleSaveJob(
@@ -69,5 +98,6 @@ export class JobsController {
     // TODO: Get userId from request once authentication is implemented
     const userId = req.user?.id || '1'; // Placeholder
     return this.jobsService.isJobSaved(+id, userId);
+main
   }
 }
