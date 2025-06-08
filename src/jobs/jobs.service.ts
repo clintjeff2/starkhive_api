@@ -92,10 +92,13 @@ feature/job-edit-budget-deadline
     if (!job.isAcceptingApplications) {
       throw new ForbiddenException('This job is not accepting applications.');
     }
+feature/toggle-job-applications
+
 
   async createApplication(
     createApplicationDto: CreateApplicationDto,
   ): Promise<Application> {
+main
 main
     const application = this.applicationRepository.create(createApplicationDto);
     return this.applicationRepository.save(application);
@@ -193,7 +196,10 @@ main
     return this.jobRepository.save(job);
   }
 
+feature/toggle-job-applications
+
 feature/job-edit-budget-deadline
+main
   // Toggle isAcceptingApplications for a job
   async toggleAcceptingApplications(jobId: number, isAccepting: boolean, userId: number): Promise<Job> {
     const job = await this.findJobById(jobId);
@@ -203,6 +209,9 @@ feature/job-edit-budget-deadline
     job.isAcceptingApplications = isAccepting;
     return this.jobRepository.save(job);
   }
+feature/toggle-job-applications
+}
+
 }
 
   async toggleSaveJob(
@@ -253,4 +262,5 @@ feature/job-edit-budget-deadline
     return !!savedJob;
   }
 }
+main
 main

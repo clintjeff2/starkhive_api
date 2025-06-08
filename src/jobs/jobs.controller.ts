@@ -100,4 +100,16 @@ feature/job-edit-budget-deadline
     return this.jobsService.isJobSaved(+id, userId);
 main
   }
+
+  @Patch(':id/toggle-applications')
+  // TODO: Add @UseGuards(AuthGuard) once authentication is implemented
+  async toggleAcceptingApplications(
+    @Param('id') id: string,
+    @Body('isAcceptingApplications') isAcceptingApplications: boolean,
+    // TODO: Add @Request() req once authentication is implemented
+  ) {
+    // TODO: Get userId from request once authentication is implemented
+    const userId = 1; // Placeholder
+    return this.jobsService.toggleAcceptingApplications(+id, isAcceptingApplications, userId);
+  }
 }

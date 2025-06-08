@@ -17,12 +17,15 @@ export class Job {
   @Column({ default: false })
   isFlagged: boolean;
 
+feature/toggle-job-applications
+
   @Column('decimal', { nullable: true })
   budget?: number;
 
   @Column({ type: 'timestamp', nullable: true })
   deadline?: Date;
 
+main
   @Column({ default: true })
   isAcceptingApplications: boolean;
 
@@ -49,7 +52,11 @@ export class Job {
 
   @CreateDateColumn()
   createdAt: Date;
+feature/toggle-job-applications
+feature/toggle-job-applications
+
 feature/job-edit-budget-deadline
+main
 
 
   @UpdateDateColumn()
