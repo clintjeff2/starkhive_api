@@ -22,6 +22,7 @@ import { JobsService } from '../jobs/jobs.service';
 // import { LoginDto } from './dto/login-user.dto';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { GetUsersDto } from './dto/get-users.dto';
+import { SuspendUserDto } from './dto/suspend-user.dto';
 
 import {
   ApiTags,
@@ -155,5 +156,22 @@ export class AuthController {
   async getUsers(@Query() getUsersDto: GetUsersDto) {
     const { page = 1, limit = 10, role, isSuspended } = getUsersDto;
     return this.authService.getUsersWithFilters(page, limit, role, isSuspended);
+  }
+
+  @Post('suspend')
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @ApiOperation({ summary: 'Suspend or unsuspend a user (admin only)' })
+  @ApiResponse({ status: 200, description: 'User suspension status toggled successfully' })
+  @ApiUnauthorizedResponse({ description: 'Only admins can suspend users' })
+  @ApiBadRequestResponse({ description: 'Invalid user ID or cannot suspend admin users' })
+  async suspendUser(
+    @Request() req,
+    @Body() suspendUserDto: SuspendUserDto
+  ) {
+    const user = await this.authService.suspendUser(req.user.id, suspendUserDto.userId);
+    return {
+      message: `User ${user.email} has been ${user.isSuspended ? 'suspended' : 'unsuspended'}.`,
+      isSuspended: user.isSuspended
+    };
   }
 }
