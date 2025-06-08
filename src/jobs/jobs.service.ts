@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { Job } from './entities/job.entity';
 import { Application } from 'src/applications/entities/application.entity';
+import { SavedJob } from './entities/saved-job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
-import { CreateApplicationDto } from 'src/applications/dto/create-application.dto'; 
+import { CreateApplicationDto } from 'src/applications/dto/create-application.dto';
 import { UpdateApplicationDto } from 'src/applications/dto/update-application.dto';
 import { UpdateJobStatusDto } from './dto/update-status.dto';
 
@@ -20,6 +25,9 @@ export class JobsService {
 
     @InjectRepository(Application)
     private readonly applicationRepository: Repository<Application>,
+
+    @InjectRepository(SavedJob)
+    private readonly savedJobRepository: Repository<SavedJob>,
 
     private readonly antiSpamService: AntiSpamService,
   ) {}
@@ -50,9 +58,18 @@ export class JobsService {
     return job;
   }
 
-  async updateJob(id: number, updateJobDto: UpdateJobDto): Promise<Job> {
+  async updateJob(id: number, updateJobDto: UpdateJobDto, userId: number): Promise<Job> {
     const job = await this.findJobById(id);
+    
+    // Check if the user is the owner of the job
+    if (job.ownerId !== userId) {
+      throw new ForbiddenException('Only the job owner can update this job');
+    }
+    
+    // Update only the provided fields
     Object.assign(job, updateJobDto);
+    
+    // Save the updated job
     return this.jobRepository.save(job);
   }
 
@@ -65,6 +82,7 @@ export class JobsService {
   }
 
   // Application CRUD
+feature/job-edit-budget-deadline
   async createApplication(createApplicationDto: CreateApplicationDto): Promise<Application> {
     // Check if job is accepting applications
     const job = await this.jobRepository.findOne({ where: { id: Number(createApplicationDto.jobId) } });
@@ -74,6 +92,14 @@ export class JobsService {
     if (!job.isAcceptingApplications) {
       throw new ForbiddenException('This job is not accepting applications.');
     }
+feature/toggle-job-applications
+
+
+  async createApplication(
+    createApplicationDto: CreateApplicationDto,
+  ): Promise<Application> {
+main
+main
     const application = this.applicationRepository.create(createApplicationDto);
     return this.applicationRepository.save(application);
   }
@@ -83,7 +109,9 @@ export class JobsService {
   }
 
   async findApplicationById(id: number): Promise<Application> {
-    const application = await this.applicationRepository.findOne({ where: { id: id.toString() } });
+    const application = await this.applicationRepository.findOne({
+      where: { id: id.toString() },
+    });
     if (!application) {
       throw new NotFoundException(`Application with ID ${id} not found`);
     }
@@ -108,50 +136,70 @@ export class JobsService {
   }
 
   // Weekly analytics for jobs
-  async getWeeklyNewJobsCount(): Promise<Array<{ week: string; count: number }>> {
+  async getWeeklyNewJobsCount(): Promise<
+    Array<{ week: string; count: number }>
+  > {
     const raw = await this.jobRepository
       .createQueryBuilder('job')
-      .select(`TO_CHAR(DATE_TRUNC('week', job."createdAt"), 'YYYY-MM-DD')`, 'week')
+      .select(
+        `TO_CHAR(DATE_TRUNC('week', job."createdAt"), 'YYYY-MM-DD')`,
+        'week',
+      )
       .addSelect('COUNT(*)', 'count')
       .groupBy(`DATE_TRUNC('week', job."createdAt")`)
       .orderBy(`DATE_TRUNC('week', job."createdAt")`, 'DESC')
       .getRawMany<{ week: string; count: string }>();
 
-    return raw.map(r => ({
+    return raw.map((r) => ({
       week: r.week,
       count: parseInt(r.count, 10),
     }));
   }
 
   // Weekly analytics for applications
-  async getWeeklyNewApplicationsCount(): Promise<Array<{ week: string; count: number }>> {
+  async getWeeklyNewApplicationsCount(): Promise<
+    Array<{ week: string; count: number }>
+  > {
     const raw = await this.applicationRepository
       .createQueryBuilder('application')
-      .select(`TO_CHAR(DATE_TRUNC('week', application."createdAt"), 'YYYY-MM-DD')`, 'week')
+      .select(
+        `TO_CHAR(DATE_TRUNC('week', application."createdAt"), 'YYYY-MM-DD')`,
+        'week',
+      )
       .addSelect('COUNT(*)', 'count')
       .groupBy(`DATE_TRUNC('week', application."createdAt")`)
       .orderBy(`DATE_TRUNC('week', application."createdAt")`, 'DESC')
       .getRawMany<{ week: string; count: string }>();
 
-    return raw.map(r => ({
+    return raw.map((r) => ({
       week: r.week,
       count: parseInt(r.count, 10),
     }));
   }
 
-  async updateJobStatus(id: number, updateStatusDto: UpdateJobStatusDto, userId: number): Promise<Job> {
+  async updateJobStatus(
+    id: number,
+    updateStatusDto: UpdateJobStatusDto,
+    userId: string,
+  ): Promise<Job> {
     const job = await this.findJobById(id);
-    
+
     // TODO: Add proper user ownership check once user system is implemented
     // For now, we'll just throw a placeholder error
-    if (job.ownerId !== userId) {
-      throw new ForbiddenException('Only the job owner can update the job status');
+    if (job.recruiterId !== userId) {
+      throw new ForbiddenException(
+        'Only the job owner can update the job status',
+      );
     }
 
     job.status = updateStatusDto.status;
     return this.jobRepository.save(job);
   }
 
+feature/toggle-job-applications
+
+feature/job-edit-budget-deadline
+main
   // Toggle isAcceptingApplications for a job
   async toggleAcceptingApplications(jobId: number, isAccepting: boolean, userId: number): Promise<Job> {
     const job = await this.findJobById(jobId);
@@ -161,4 +209,58 @@ export class JobsService {
     job.isAcceptingApplications = isAccepting;
     return this.jobRepository.save(job);
   }
+feature/toggle-job-applications
 }
+
+}
+
+  async toggleSaveJob(
+    jobId: number,
+    userId: string,
+  ): Promise<{ saved: boolean }> {
+    await this.findJobById(jobId); // Verify job exists
+
+    const existingSavedJob = await this.savedJobRepository.findOne({
+      where: {
+        job: { id: jobId },
+        user: { id: userId },
+      },
+      relations: ['job', 'user'],
+    });
+
+    if (existingSavedJob) {
+      await this.savedJobRepository.remove(existingSavedJob);
+      return { saved: false };
+    }
+
+    const savedJob = this.savedJobRepository.create({
+      job: { id: jobId },
+      user: { id: userId },
+    });
+    await this.savedJobRepository.save(savedJob);
+    return { saved: true };
+  }
+
+  async getSavedJobs(userId: string): Promise<Job[]> {
+    const savedJobs = await this.savedJobRepository.find({
+      where: { user: { id: userId } },
+      relations: ['job'],
+      order: { savedAt: 'DESC' },
+    });
+
+    return savedJobs.map((savedJob) => savedJob.job);
+  }
+
+  async isJobSaved(jobId: number, userId: string): Promise<boolean> {
+    const savedJob = await this.savedJobRepository.findOne({
+      where: {
+        job: { id: jobId },
+        user: { id: userId },
+      },
+      relations: ['job', 'user'],
+    });
+    return !!savedJob;
+  }
+}
+main
+main
