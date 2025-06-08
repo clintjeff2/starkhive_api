@@ -8,7 +8,7 @@ import { BcryptProvider } from './providers/bcrypt';
 import { PasswordReset } from './entities/password-reset.entity';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MailService} from '../mail/mail.service';
+import { MailService } from '../mail/mail.service';
 import { LogInProvider } from './providers/loginProvider';
 import { GenerateTokensProvider } from './providers/generateTokensProvider';
 import { Portfolio } from './entities/portfolio.entity';
@@ -31,7 +31,7 @@ import { EmailToken } from './entities/email-token.entity';
         };
       },
     }),
-  ],  
+  ],
   providers: [
     AuthService,
     LogInProvider,
@@ -44,6 +44,13 @@ import { EmailToken } from './entities/email-token.entity';
     },
   ],
   controllers: [AuthController],
-  exports: [AuthService, TypeOrmModule, HashingProvider, MailService, JwtService, GenerateTokensProvider],
+  exports: [
+    AuthService,
+    TypeOrmModule,
+    HashingProvider,
+    MailService,
+    JwtService,
+    GenerateTokensProvider,
+  ],
 })
 export class AuthModule {}

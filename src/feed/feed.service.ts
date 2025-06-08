@@ -13,6 +13,7 @@ import { JobStatus } from './enums/job-status.enum';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { Comment } from './entities/comment.entity';
 import { User } from 'src/auth/entities/user.entity';
+import { Like } from './entities/like.entity';
 
 @Injectable()
 export class FeedService {
@@ -33,6 +34,9 @@ export class FeedService {
 
     @InjectRepository(Comment)
     private commentRepository: Repository<Comment>,
+
+    @InjectRepository(Like)
+    private readonly likeRepository: Repository<Like>,
   ) {}
 
   async createFeedPost(user: User, dto: CreatePostDto): Promise<Post> {
@@ -160,6 +164,38 @@ export class FeedService {
     });
 
     return await this.commentRepository.save(comment);
+  }
+
+  async toggleLikePost(
+    postId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
+    // Validate post exists
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const existing = await this.likeRepository.findOne({
+      where: {
+        post: { id: postId },
+        user: { id: userId },
+      },
+      relations: ['post', 'user'],
+    });
+
+    if (existing) {
+      await this.likeRepository.remove(existing);
+      return { message: 'Post unliked' };
+    }
+
+    const like = this.likeRepository.create({
+      post: { id: postId },
+      user: { id: userId },
+    });
+
+    await this.likeRepository.save(like);
+    return { message: 'Post liked' };
   }
   // Optional CRUD methods - adjust as needed
   create(createFeedDto: CreateFeedDto) {
