@@ -150,9 +150,16 @@ export class AuthController {
 
   @Get('users')
   @UseGuards(AuthGuard('jwt'), AdminGuard)
-  @ApiOperation({ summary: 'Get all users with pagination and filters (admin only)' })
-  @ApiResponse({ status: 200, description: 'List of users returned successfully' })
-  @ApiUnauthorizedResponse({ description: 'Only admins can access this endpoint' })
+  @ApiOperation({
+    summary: 'Get all users with pagination and filters (admin only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of users returned successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Only admins can access this endpoint',
+  })
   async getUsers(@Query() getUsersDto: GetUsersDto) {
     const { page = 1, limit = 10, role, isSuspended } = getUsersDto;
     return this.authService.getUsersWithFilters(page, limit, role, isSuspended);
@@ -161,17 +168,42 @@ export class AuthController {
   @Post('suspend')
   @UseGuards(AuthGuard('jwt'), AdminGuard)
   @ApiOperation({ summary: 'Suspend or unsuspend a user (admin only)' })
-  @ApiResponse({ status: 200, description: 'User suspension status toggled successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'User suspension status toggled successfully',
+  })
   @ApiUnauthorizedResponse({ description: 'Only admins can suspend users' })
-  @ApiBadRequestResponse({ description: 'Invalid user ID or cannot suspend admin users' })
-  async suspendUser(
-    @Request() req,
-    @Body() suspendUserDto: SuspendUserDto
-  ) {
-    const user = await this.authService.suspendUser(req.user.id, suspendUserDto.userId);
+  @ApiBadRequestResponse({
+    description: 'Invalid user ID or cannot suspend admin users',
+  })
+  async suspendUser(@Request() req, @Body() suspendUserDto: SuspendUserDto) {
+    const user = await this.authService.suspendUser(
+      req.user.id,
+      suspendUserDto.userId,
+    );
     return {
       message: `User ${user.email} has been ${user.isSuspended ? 'suspended' : 'unsuspended'}.`,
-      isSuspended: user.isSuspended
+      isSuspended: user.isSuspended,
     };
+  }
+
+  @Get('recruiter/:recruiterId/public-profile')
+  @ApiOperation({ summary: 'Get public recruiter profile information' })
+  @ApiResponse({
+    status: 200,
+    description: 'Public recruiter profile returned successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', example: 'uuid-string' },
+        username: { type: 'string', example: 'recruiter_username' },
+        role: { type: 'string', example: 'RECRUITER' },
+        createdAt: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Recruiter not found' })
+  async getPublicRecruiterProfile(@Param('recruiterId') recruiterId: string) {
+    return this.authService.getPublicRecruiterProfile(recruiterId);
   }
 }
