@@ -1,34 +1,50 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
-import type { Repository, SelectQueryBuilder } from "typeorm"
-import { type Job, JobStatus } from "./entities/job.entity"
-import type { CreateJobDto } from "./dto/create-job.dto"
-import type { UpdateJobDto } from "./dto/update-job.dto"
-import type { JobQueryDto } from "./dto/job-query.dto"
-import { JobResponseDto, PaginatedJobResponseDto } from "./dto/job-response.dto"
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import type { Repository, SelectQueryBuilder } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+
+import { Job, JobStatus } from './entities/job.entity';
+import { CreateJobDto } from './dto/create-job.dto';
+import { UpdateJobDto } from './dto/update-job.dto';
+import { JobQueryDto } from './dto/job-query.dto';
+import {
+  JobResponseDto,
+  PaginatedJobResponseDto,
+} from './dto/job-response.dto';
 
 @Injectable()
 export class JobService {
-  constructor(private readonly jobRepository: Repository<Job>) {}
+  constructor(
+    @InjectRepository(Job)
+    private readonly jobRepository: Repository<Job>,
+  ) {}
 
   async create(createJobDto: CreateJobDto): Promise<JobResponseDto> {
-    // Validate salary range
-    if (createJobDto.salaryMin && createJobDto.salaryMax) {
-      if (createJobDto.salaryMin > createJobDto.salaryMax) {
-        throw new BadRequestException("Minimum salary cannot be greater than maximum salary")
-      }
+    if (
+      createJobDto.salaryMin !== undefined &&
+      createJobDto.salaryMax !== undefined &&
+      createJobDto.salaryMin > createJobDto.salaryMax
+    ) {
+      throw new BadRequestException(
+        'Minimum salary cannot be greater than maximum salary',
+      );
     }
 
-    // Validate application deadline
     if (createJobDto.applicationDeadline) {
-      const deadline = new Date(createJobDto.applicationDeadline)
+      const deadline = new Date(createJobDto.applicationDeadline);
       if (deadline <= new Date()) {
-        throw new BadRequestException("Application deadline must be in the future")
+        throw new BadRequestException(
+          'Application deadline must be in the future',
+        );
       }
     }
 
-    const job = this.jobRepository.create(createJobDto)
-    const savedJob = await this.jobRepository.save(job)
-    return new JobResponseDto(savedJob)
+    const job = this.jobRepository.create(createJobDto);
+    const savedJob = await this.jobRepository.save(job);
+    return new JobResponseDto(savedJob);
   }
 
   async findAll(queryDto: JobQueryDto): Promise<PaginatedJobResponseDto> {
@@ -46,14 +62,13 @@ export class JobService {
       isFeatured,
       skills,
       sortBy,
-      sortOrder,
-      page,
-      limit,
-    } = queryDto
+      sortOrder = 'DESC',
+      page = 1,
+      limit = 10,
+    } = queryDto;
 
-    const queryBuilder = this.jobRepository.createQueryBuilder("job")
+    const queryBuilder = this.jobRepository.createQueryBuilder('job');
 
-    // Apply filters
     this.applyFilters(queryBuilder, {
       search,
       location,
@@ -67,107 +82,123 @@ export class JobService {
       isUrgent,
       isFeatured,
       skills,
-    })
+    });
 
-    // Apply sorting
-    const validSortFields = [
-      "createdAt",
-      "updatedAt",
-      "title",
-      "company",
-      "salaryMin",
-      "salaryMax",
-      "viewCount",
-      "applicationCount",
-    ]
+    const validSortFields: (keyof Job)[] = [
+      'createdAt',
+      'updatedAt',
+      'title',
+      'company',
+      'salaryMin',
+      'salaryMax',
+      'viewCount',
+      'applicationCount',
+    ];
 
-    if (validSortFields.includes(sortBy)) {
-      queryBuilder.orderBy(`job.${sortBy}`, sortOrder)
+    if (sortBy && validSortFields.includes(sortBy as keyof Job)) {
+      queryBuilder.orderBy(
+        `job.${sortBy}`,
+        sortOrder.toUpperCase() as 'ASC' | 'DESC',
+      );
     } else {
-      queryBuilder.orderBy("job.createdAt", "DESC")
+      queryBuilder.orderBy('job.createdAt', 'DESC');
     }
 
-    // Apply pagination
-    const skip = (page - 1) * limit
-    queryBuilder.skip(skip).take(limit)
+    const skip = (page - 1) * limit;
+    queryBuilder.skip(skip).take(limit);
 
-    const [jobs, total] = await queryBuilder.getManyAndCount()
-
-    return new PaginatedJobResponseDto(jobs, total, page, limit)
+    const [jobs, total] = await queryBuilder.getManyAndCount();
+    return new PaginatedJobResponseDto(jobs, total, page, limit);
   }
 
   async findOne(id: string): Promise<JobResponseDto> {
-    const job = await this.jobRepository.findOne({ where: { id } })
+    const job = await this.jobRepository.findOne({ where: { id } });
     if (!job) {
-      throw new NotFoundException(`Job with ID ${id} not found`)
+      throw new NotFoundException(`Job with ID ${id} not found`);
     }
-    return new JobResponseDto(job)
+    return new JobResponseDto(job);
   }
 
-  async update(id: string, updateJobDto: UpdateJobDto): Promise<JobResponseDto> {
-    const job = await this.jobRepository.findOne({ where: { id } })
+  async update(
+    id: string,
+    updateJobDto: UpdateJobDto,
+  ): Promise<JobResponseDto> {
+    const job = await this.jobRepository.findOne({ where: { id } });
     if (!job) {
-      throw new NotFoundException(`Job with ID ${id} not found`)
+      throw new NotFoundException(`Job with ID ${id} not found`);
     }
 
-    // Validate salary range if both values are provided
-    const salaryMin = updateJobDto.salaryMin ?? job.salaryMin
-    const salaryMax = updateJobDto.salaryMax ?? job.salaryMax
+    const salaryMin = updateJobDto.salaryMin ?? job.salaryMin;
+    const salaryMax = updateJobDto.salaryMax ?? job.salaryMax;
 
     if (salaryMin && salaryMax && salaryMin > salaryMax) {
-      throw new BadRequestException("Minimum salary cannot be greater than maximum salary")
+      throw new BadRequestException(
+        'Minimum salary cannot be greater than maximum salary',
+      );
     }
 
-    // Validate application deadline
     if (updateJobDto.applicationDeadline) {
-      const deadline = new Date(updateJobDto.applicationDeadline)
+      const deadline = new Date(updateJobDto.applicationDeadline);
       if (deadline <= new Date()) {
-        throw new BadRequestException("Application deadline must be in the future")
+        throw new BadRequestException(
+          'Application deadline must be in the future',
+        );
       }
     }
 
-    await this.jobRepository.update(id, updateJobDto)
-    const updatedJob = await this.jobRepository.findOne({ where: { id } })
-    return new JobResponseDto(updatedJob)
+    await this.jobRepository.update(id, updateJobDto);
+    const updatedJob = await this.jobRepository.findOne({ where: { id } });
+    if (!updatedJob) {
+      throw new NotFoundException(`Updated job with ID ${id} not found`);
+    }
+    return new JobResponseDto(updatedJob);
   }
 
   async remove(id: string): Promise<void> {
-    const job = await this.jobRepository.findOne({ where: { id } })
+    const job = await this.jobRepository.findOne({ where: { id } });
     if (!job) {
-      throw new NotFoundException(`Job with ID ${id} not found`)
+      throw new NotFoundException(`Job with ID ${id} not found`);
     }
-    await this.jobRepository.remove(job)
+    await this.jobRepository.remove(job);
   }
 
   async incrementViewCount(id: string): Promise<void> {
-    await this.jobRepository.increment({ id }, "viewCount", 1)
+    await this.jobRepository.increment({ id }, 'viewCount', 1);
   }
 
   async incrementApplicationCount(id: string): Promise<void> {
-    await this.jobRepository.increment({ id }, "applicationCount", 1)
+    await this.jobRepository.increment({ id }, 'applicationCount', 1);
   }
 
-  async getJobStats(): Promise<any> {
-    const totalJobs = await this.jobRepository.count()
+  async getJobStats(): Promise<{
+    totalJobs: number;
+    activeJobs: number;
+    featuredJobs: number;
+    remoteJobs: number;
+  }> {
+    const totalJobs = await this.jobRepository.count();
     const activeJobs = await this.jobRepository.count({
       where: { status: JobStatus.ACTIVE },
-    })
+    });
     const featuredJobs = await this.jobRepository.count({
       where: { isFeatured: true },
-    })
+    });
     const remoteJobs = await this.jobRepository.count({
       where: { isRemote: true },
-    })
+    });
 
     return {
       totalJobs,
       activeJobs,
       featuredJobs,
       remoteJobs,
-    }
+    };
   }
 
-  private applyFilters(queryBuilder: SelectQueryBuilder<Job>, filters: any): void {
+  private applyFilters(
+    queryBuilder: SelectQueryBuilder<Job>,
+    filters: any,
+  ): void {
     const {
       search,
       location,
@@ -181,63 +212,64 @@ export class JobService {
       isUrgent,
       isFeatured,
       skills,
-    } = filters
+    } = filters;
 
     if (search) {
-      queryBuilder.andWhere("(job.title ILIKE :search OR job.description ILIKE :search OR job.company ILIKE :search)", {
-        search: `%${search}%`,
-      })
+      queryBuilder.andWhere(
+        '(job.title ILIKE :search OR job.description ILIKE :search OR job.company ILIKE :search)',
+        { search: `%${search}%` },
+      );
     }
 
     if (location) {
-      queryBuilder.andWhere("job.location ILIKE :location", {
+      queryBuilder.andWhere('job.location ILIKE :location', {
         location: `%${location}%`,
-      })
+      });
     }
 
     if (company) {
-      queryBuilder.andWhere("job.company ILIKE :company", {
+      queryBuilder.andWhere('job.company ILIKE :company', {
         company: `%${company}%`,
-      })
+      });
     }
 
     if (jobType) {
-      queryBuilder.andWhere("job.jobType = :jobType", { jobType })
+      queryBuilder.andWhere('job.jobType = :jobType', { jobType });
     }
 
     if (status) {
-      queryBuilder.andWhere("job.status = :status", { status })
+      queryBuilder.andWhere('job.status = :status', { status });
     }
 
     if (experienceLevel) {
-      queryBuilder.andWhere("job.experienceLevel = :experienceLevel", {
+      queryBuilder.andWhere('job.experienceLevel = :experienceLevel', {
         experienceLevel,
-      })
+      });
     }
 
-    if (salaryMin) {
-      queryBuilder.andWhere("job.salaryMax >= :salaryMin", { salaryMin })
+    if (salaryMin !== undefined) {
+      queryBuilder.andWhere('job.salaryMax >= :salaryMin', { salaryMin });
     }
 
-    if (salaryMax) {
-      queryBuilder.andWhere("job.salaryMin <= :salaryMax", { salaryMax })
+    if (salaryMax !== undefined) {
+      queryBuilder.andWhere('job.salaryMin <= :salaryMax', { salaryMax });
     }
 
     if (isRemote !== undefined) {
-      queryBuilder.andWhere("job.isRemote = :isRemote", { isRemote })
+      queryBuilder.andWhere('job.isRemote = :isRemote', { isRemote });
     }
 
     if (isUrgent !== undefined) {
-      queryBuilder.andWhere("job.isUrgent = :isUrgent", { isUrgent })
+      queryBuilder.andWhere('job.isUrgent = :isUrgent', { isUrgent });
     }
 
     if (isFeatured !== undefined) {
-      queryBuilder.andWhere("job.isFeatured = :isFeatured", { isFeatured })
+      queryBuilder.andWhere('job.isFeatured = :isFeatured', { isFeatured });
     }
 
     if (skills) {
-      const skillsArray = skills.split(",").map((skill) => skill.trim())
-      queryBuilder.andWhere("job.skills && :skills", { skills: skillsArray })
+      const skillsArray = skills.split(',').map((skill) => skill.trim());
+      queryBuilder.andWhere('job.skills && :skills', { skills: skillsArray });
     }
   }
 }

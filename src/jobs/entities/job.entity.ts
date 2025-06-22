@@ -1,7 +1,16 @@
 import { Application } from 'src/applications/entities/application.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { JobStatus } from 'src/feed/enums/job-status.enum';
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  JoinColumn,
+  ManyToOne,
+} from 'typeorm';
 
 @Entity()
 export class Job {
@@ -17,22 +26,20 @@ export class Job {
   @Column({ default: false })
   isFlagged: boolean;
 
-feature/toggle-job-applications
-
   @Column('decimal', { nullable: true })
   budget?: number;
 
   @Column({ type: 'timestamp', nullable: true })
   deadline?: Date;
 
-main
+  main;
   @Column({ default: true })
   isAcceptingApplications: boolean;
 
   @Column({
     type: 'enum',
     enum: JobStatus,
-    default: JobStatus.OPEN
+    default: JobStatus.OPEN,
   })
   status: JobStatus;
 
@@ -49,21 +56,12 @@ main
   @Column()
   recruiterId: string;
 
-
   @CreateDateColumn()
   createdAt: Date;
-feature/toggle-job-applications
-feature/toggle-job-applications
-
-feature/job-edit-budget-deadline
-main
-
 
   @UpdateDateColumn()
   updatedAt: Date;
 
   @Column({ nullable: true })
-main
   freelancer: any;
 }
- 

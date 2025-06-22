@@ -8,11 +8,21 @@ import { Post } from './entities/post.entity';
 import { Job } from 'src/jobs/entities/job.entity';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { Comment } from './entities/comment.entity';
+import { FeedPost } from './entities/feed.entity';
+import { Report } from './entities/report.entity';
 
 @Module({
   imports: [
     NotificationsModule,
-    TypeOrmModule.forFeature([SavedPost, Post, Comment, Job, Like]),
+    TypeOrmModule.forFeature([
+      SavedPost,
+      Post,
+      Comment,
+      Job,
+      Like,
+      FeedPost,
+      Report,
+    ]),
   ],
   controllers: [FeedController],
   providers: [FeedService],
