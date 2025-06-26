@@ -1,4 +1,5 @@
 import { NestFactory, Reflector } from '@nestjs/core';
+import { NestApplication } from '@nestjs/core';
 import { AppModule } from './app.module';
 import {
   ClassSerializerInterceptor,
@@ -39,7 +40,7 @@ async function bootstrap() {
   const trustProxy =
     configService.get('TRUST_PROXY', 'false').toLowerCase() === 'true';
   if (trustProxy) {
-    app.set('trust proxy', 1);
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
   }
   const frontendUrl = configService.get<string>('FRONTEND_URL');
   // CORS Configuration

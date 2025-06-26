@@ -14,6 +14,7 @@ import * as bcrypt from 'bcryptjs';
 import { RegisterDto } from './dto/register-user.dto';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { JwtService } from '@nestjs/jwt';
+import { addMinutes } from 'date-fns';
 import * as crypto from 'crypto';
 import { addHours } from 'date-fns';
 import { PasswordReset } from './entities/password-reset.entity';
