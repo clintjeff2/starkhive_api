@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  IsDateString,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateJobDto {
   @IsString()
@@ -13,11 +20,15 @@ export class CreateJobDto {
   @IsNotEmpty()
   company: string;
 
-  @IsNumber()
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'Budget must be a number' })
   budget?: number;
 
-  @IsDateString()
   @IsOptional()
+  @IsDateString(
+    {},
+    { message: 'Deadline must be a valid ISO 8601 date string' },
+  )
   deadline?: string;
 }

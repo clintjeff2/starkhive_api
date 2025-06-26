@@ -30,6 +30,7 @@ import {
   ApiResponse,
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
+  ApiBody,
   // ApiConsumes,
   // ApiBody,
 } from '@nestjs/swagger';
@@ -43,6 +44,7 @@ import { AuthGuardGuard } from './guards/auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { LogInDto } from './dto/loginDto';
 import { LogInProvider } from './providers/loginProvider';
+import { AdminGuard } from './admin.guard';
 // import { AdminGuard } from './admin.guard';
 
 @ApiTags('auth')

@@ -21,6 +21,7 @@ import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
 import { LogInDto } from './dto/loginDto';
 import { LogInProvider } from './providers/loginProvider';
+import { addMinutes } from 'date-fns';
 
 @Injectable()
 export class AuthService {
@@ -213,19 +214,24 @@ export class AuthService {
   public async sendPasswordResetEmail(email: string): Promise<void> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) return; // don't reveal user existence
+
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = addMinutes(new Date(), 15);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+
     const reset = this.passwordResetRepository.create({
       user: user,
       token,
       expiresAt,
     });
+
     await this.passwordResetRepository.save(reset);
+
     const resetLink = `https://your-app.com/reset-password?token=${token}`;
+
     await this.mailService.sendEmail({
       to: user.email,
       subject: 'Password Reset Request',
-      body: `Click the link to reset your password: ${resetLink}`,
+      html: `Click the link to reset your password: <a href="${resetLink}">Reset Password</a>`, // or 'text' depending on your interface
     });
   }
 
