@@ -1,6 +1,11 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ClassSerializerInterceptor, Logger, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  Logger,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as compression from 'compression';
@@ -11,12 +16,13 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ValidationExceptionFilter } from './common/filters/validation-exception.filter';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
   // Create the application with logger
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
@@ -28,21 +34,22 @@ async function bootstrap() {
   // Security Middleware
   app.use(helmet());
   app.use(compression());
-  
+
   // Trust proxy if behind a reverse proxy (e.g., Nginx, Heroku, etc.)
-  const trustProxy = configService.get('TRUST_PROXY', 'false').toLowerCase() === 'true';
+  const trustProxy =
+    configService.get('TRUST_PROXY', 'false').toLowerCase() === 'true';
   if (trustProxy) {
     app.set('trust proxy', 1);
   }
-
+  const frontendUrl = configService.get<string>('FRONTEND_URL');
   // CORS Configuration
   app.enableCors({
-    origin: isProduction 
-      ? [
-          configService.get('FRONTEND_URL'),
-          `https://${configService.get('FRONTEND_URL')}`,
-        ]
-      : true, // Allow all in development
+    origin: isProduction
+      ? ([frontendUrl, `https://${frontendUrl}`].filter(Boolean) as (
+          | string
+          | RegExp
+        )[])
+      : true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
@@ -115,7 +122,7 @@ async function bootstrap() {
   // Start the application
   await app.listen(port, '0.0.0.0');
   logger.log(`Application is running on: http://localhost:${port}`);
-  
+
   if (!isProduction) {
     logger.log(`Swagger UI available at: http://localhost:${port}/api`);
   }

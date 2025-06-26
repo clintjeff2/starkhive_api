@@ -1,12 +1,13 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 import { UserRole } from '../enums/userRole.enum';
 import { ApiProperty } from '@nestjs/swagger';
-import { SavedPost } from 'src/feed/entities/savedpost.entity';
-import { Post } from 'src/feed/entities/post.entity';
+import { SavedPost } from '../../feed/entities/savedpost.entity';
+import { Post } from '../../feed/entities/post.entity';
 import { Portfolio } from './portfolio.entity';
-import { Application } from 'src/applications/entities/application.entity';
-import { Job } from 'src/jobs/entities/job.entity';
-import { Comment } from 'src/feed/entities/comment.entity';
+import { Application } from '../../applications/entities/application.entity';
+import { Job } from '../../jobs/entities/job.entity';
+import { Comment } from '../../feed/entities/comment.entity';
+import { Like } from '../../feed/entities/like.entity';
 import { EmailToken } from './email-token.entity';
 
 @Entity()
@@ -45,20 +46,25 @@ export class User {
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
 
+  @OneToMany(() => Like, (like) => like.user)
+  likes: Like[];
+
   notifications: any;
 
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolios: Portfolio[];
 
-  @OneToMany(() => Post, post => post.user)
+  @OneToMany(() => Post, (post) => post.user)
   posts: Post[];
 
   @OneToMany(() => Job, (job) => job.recruiter)
-  jobs: Job [];
+  jobs: Job[];
 
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];
 
+  @Column({ default: false })
+  isSuspended: boolean;
   @ApiProperty({
     description: 'Whether the user has verified their email',
     example: false,
