@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserRole } from './enums/userRole.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,9 +20,9 @@ import { addHours } from 'date-fns';
 import { PasswordReset } from './entities/password-reset.entity';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
-import { HashingProvider } from './providers/hashingProvider';
 import { LogInDto } from './dto/loginDto';
 import { LogInProvider } from './providers/loginProvider';
+import { addMinutes } from 'date-fns';
 
 @Injectable()
 export class AuthService {
@@ -26,14 +31,23 @@ export class AuthService {
    * @param requesterId - ID of the user making the request
    * @param targetUserId - ID of the user to be promoted
    */
-  async promoteToAdmin(requesterId: string, targetUserId: string): Promise<User> {
+  async promoteToAdmin(
+    requesterId: string,
+    targetUserId: string,
+  ): Promise<User> {
     // Get the requesting user
-    const requester = await this.userRepository.findOne({ where: { id: requesterId } });
+    const requester = await this.userRepository.findOne({
+      where: { id: requesterId },
+    });
     if (!requester || requester.role !== UserRole.SUPER_ADMIN) {
-      throw new UnauthorizedException('Only super admins can promote users to admin');
+      throw new UnauthorizedException(
+        'Only super admins can promote users to admin',
+      );
     }
     // Get the target user
-    const targetUser = await this.userRepository.findOne({ where: { id: targetUserId } });
+    const targetUser = await this.userRepository.findOne({
+      where: { id: targetUserId },
+    });
     if (!targetUser) {
       throw new BadRequestException('Target user does not exist');
     }
@@ -46,7 +60,6 @@ export class AuthService {
   // TODO: Move allowedMimeTypes and maxFileSize to configuration
   private allowedMimeTypes: string[];
   private maxFileSize: number;
- 
   private readonly EMAIL_TOKEN_EXPIRATION_HOURS = 24; // 24 hours
 
   constructor(
@@ -58,33 +71,41 @@ export class AuthService {
     @InjectRepository(EmailToken)
     private readonly emailTokenRepository: Repository<EmailToken>,
     private readonly jwtService: JwtService,
+
     @InjectRepository(PasswordReset)
     private readonly passwordResetRepository: Repository<PasswordReset>,
     private readonly configService: ConfigService,
-    private readonly loginProvider: LogInProvider
+    private readonly loginProvider: LogInProvider,
   ) {
-    this.allowedMimeTypes = this.configService.get<string[]>('portfolio.allowedMimeTypes', ['image/jpeg', 'image/png', 'application/pdf']);
-    this.maxFileSize = this.configService.get<number>('portfolio.maxFileSize', 5 * 1024 * 1024);
+    this.allowedMimeTypes = this.configService.get<string[]>(
+      'portfolio.allowedMimeTypes',
+      ['image/jpeg', 'image/png', 'application/pdf'],
+    );
+    this.maxFileSize = this.configService.get<number>(
+      'portfolio.maxFileSize',
+      5 * 1024 * 1024,
+    );
   }
 
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
     const { email, password, role } = registerDto;
-  
+
     const existing = await this.userRepository.findOne({ where: { email } });
+
     if (existing) throw new BadRequestException('Email already exists');
-  
+
     const hashed = await bcrypt.hash(password, 10);
-  
-    const user = this.userRepository.create({ 
-      email, 
-      password: hashed, 
+
+    const user = this.userRepository.create({
+      email,
+      password: hashed,
       role,
-      isEmailVerified: false 
+      isEmailVerified: false,
     });
-    
+
     const saved = await this.userRepository.save(user);
     await this.sendVerificationEmail(user.email);
-  
+
     const { password: _, ...safeUser } = saved;
     return safeUser;
   }
@@ -98,7 +119,7 @@ export class AuthService {
     // Invalidate any existing tokens
     await this.emailTokenRepository.update(
       { userId: user.id, used: false },
-      { used: true }
+      { used: true },
     );
 
     // Generate new token
@@ -110,7 +131,7 @@ export class AuthService {
       token,
       expiresAt,
       user,
-      used: false
+      used: false,
     });
 
     await this.emailTokenRepository.save(emailToken);
@@ -120,10 +141,12 @@ export class AuthService {
     await this.mailService.sendVerificationEmail(user.email, verificationUrl);
   }
 
-  async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
+  async verifyEmail(
+    token: string,
+  ): Promise<{ success: boolean; message: string }> {
     const emailToken = await this.emailTokenRepository.findOne({
       where: { token, used: false },
-      relations: ['user']
+      relations: ['user'],
     });
 
     if (!emailToken) {
@@ -140,11 +163,13 @@ export class AuthService {
     await this.emailTokenRepository.save(emailToken);
 
     // Update user's email verification status
-    await this.userRepository.update(emailToken.userId, { isEmailVerified: true });
+    await this.userRepository.update(emailToken.userId, {
+      isEmailVerified: true,
+    });
 
     return {
       success: true,
-      message: 'Email verified successfully. You can now log in.'
+      message: 'Email verified successfully. You can now log in.',
     };
   }
 
@@ -164,19 +189,25 @@ export class AuthService {
   async getOneByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({ where: { email } });
   }
-  
-    
 
   async login(loginDto: LogInDto): Promise<string> {
     const { email, password } = loginDto;
     const user = await this.userRepository.findOneBy({ email: email });
+
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid email or password');
     }
+
+    if (user.isSuspended) {
+      throw new UnauthorizedException(
+        'Your account has been suspended. Please contact support for assistance.',
+      );
+    }
+
     const payload = {
       sub: user.id,
       email: user.email,
-      role: user.role
+      role: user.role,
     };
     return this.jwtService.sign(payload);
   }
@@ -184,15 +215,24 @@ export class AuthService {
   public async sendPasswordResetEmail(email: string): Promise<void> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) return; // don't reveal user existence
+
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = addMinutes(new Date(), 15);
-    const reset = this.passwordResetRepository.create({ user: user, token, expiresAt });
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+
+    const reset = this.passwordResetRepository.create({
+      user: user,
+      token,
+      expiresAt,
+    });
+
     await this.passwordResetRepository.save(reset);
+
     const resetLink = `https://your-app.com/reset-password?token=${token}`;
+
     await this.mailService.sendEmail({
       to: user.email,
       subject: 'Password Reset Request',
-      html: `Click the link to reset your password: <a href="${resetLink}">${resetLink}</a>`,
+      html: `Click the link to reset your password: <a href="${resetLink}">Reset Password</a>`, // or 'text' depending on your interface
     });
   }
 
@@ -211,10 +251,16 @@ export class AuthService {
   }
 
   // --- Portfolio Methods ---
-  async createPortfolio(userId: string, dto: CreatePortfolioDto, file: any): Promise<Portfolio> {
+  async createPortfolio(
+    userId: string,
+    dto: CreatePortfolioDto,
+    file: any,
+  ): Promise<Portfolio> {
     if (!file) throw new BadRequestException('File is required');
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException('Invalid file type. Only JPEG, PNG, and PDF are allowed.');
+      throw new BadRequestException(
+        'Invalid file type. Only JPEG, PNG, and PDF are allowed.',
+      );
     }
     if (file.size > this.maxFileSize) {
       throw new BadRequestException('File size exceeds the 5MB limit.');
@@ -231,8 +277,16 @@ export class AuthService {
     return this.portfolioRepository.save(portfolio);
   }
 
-  async updatePortfolio(userId: string, portfolioId: string, dto: Partial<CreatePortfolioDto>, file?: any): Promise<Portfolio> {
-    const portfolio = await this.portfolioRepository.findOne({ where: { id: portfolioId }, relations: ['user'] });
+  async updatePortfolio(
+    userId: string,
+    portfolioId: string,
+    dto: Partial<CreatePortfolioDto>,
+    file?: any,
+  ): Promise<Portfolio> {
+    const portfolio = await this.portfolioRepository.findOne({
+      where: { id: portfolioId },
+      relations: ['user'],
+    });
     if (!portfolio || portfolio.user.id !== userId) {
       throw new UnauthorizedException('Portfolio not found or access denied');
     }
@@ -240,7 +294,9 @@ export class AuthService {
     if (dto.description) portfolio.description = dto.description;
     if (file) {
       if (!this.allowedMimeTypes.includes(file.mimetype)) {
-        throw new BadRequestException('Invalid file type. Only JPEG, PNG, and PDF are allowed.');
+        throw new BadRequestException(
+          'Invalid file type. Only JPEG, PNG, and PDF are allowed.',
+        );
       }
       if (file.size > this.maxFileSize) {
         throw new BadRequestException('File size exceeds the 5MB limit.');
@@ -251,7 +307,10 @@ export class AuthService {
   }
 
   async deletePortfolio(userId: string, portfolioId: string): Promise<void> {
-    const portfolio = await this.portfolioRepository.findOne({ where: { id: portfolioId }, relations: ['user'] });
+    const portfolio = await this.portfolioRepository.findOne({
+      where: { id: portfolioId },
+      relations: ['user'],
+    });
     if (!portfolio || portfolio.user.id !== userId) {
       throw new UnauthorizedException('Portfolio not found or access denied');
     }
@@ -259,12 +318,117 @@ export class AuthService {
   }
 
   async getUserPortfolios(userId: string): Promise<Portfolio[]> {
-    return this.portfolioRepository.find({ where: { user: { id: userId } }, order: { createdAt: 'DESC' } });
+    return this.portfolioRepository.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async findByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({ where: { email } });
   }
-  
-}
 
+  async getUsersWithFilters(
+    page: number,
+    limit: number,
+    role?: UserRole,
+    isSuspended?: boolean,
+  ) {
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.userRepository
+      .createQueryBuilder('user')
+      .select([
+        'user.id',
+        'user.email',
+        'user.username',
+        'user.role',
+        'user.isSuspended',
+        'user.createdAt',
+        'user.updatedAt',
+      ]);
+
+    if (role) {
+      queryBuilder.andWhere('user.role = :role', { role });
+    }
+
+    if (isSuspended !== undefined) {
+      queryBuilder.andWhere('user.isSuspended = :isSuspended', { isSuspended });
+    }
+
+    const [users, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .orderBy('user.createdAt', 'DESC')
+      .getManyAndCount();
+
+    return {
+      users,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async suspendUser(adminId: string, targetUserId: string): Promise<User> {
+    // Get the admin user
+    const admin = await this.userRepository.findOne({ where: { id: adminId } });
+    if (
+      !admin ||
+      (admin.role !== UserRole.ADMIN && admin.role !== UserRole.SUPER_ADMIN)
+    ) {
+      throw new UnauthorizedException('Only administrators can suspend users');
+    }
+
+    // Get the target user
+    const targetUser = await this.userRepository.findOne({
+      where: { id: targetUserId },
+    });
+    if (!targetUser) {
+      throw new BadRequestException('Target user does not exist');
+    }
+
+    // Prevent suspending admins and super admins
+    if (
+      targetUser.role === UserRole.ADMIN ||
+      targetUser.role === UserRole.SUPER_ADMIN
+    ) {
+      throw new BadRequestException('Cannot suspend administrators');
+    }
+
+    // Prevent self-suspension
+    if (adminId === targetUserId) {
+      throw new BadRequestException('Cannot suspend your own account');
+    }
+
+    // Toggle suspension status
+    targetUser.isSuspended = !targetUser.isSuspended;
+    await this.userRepository.save(targetUser);
+
+    return targetUser;
+  }
+
+  async getPublicRecruiterProfile(recruiterId: string): Promise<Partial<User>> {
+    const recruiter = await this.userRepository.findOne({
+      where: {
+        id: recruiterId,
+        role: UserRole.RECRUITER,
+      },
+      select: ['id', 'email', 'role', 'createdAt'],
+    });
+
+    if (!recruiter) {
+      throw new NotFoundException('Recruiter not found');
+    }
+
+    // Return only public information
+    return {
+      id: recruiter.id,
+      role: recruiter.role,
+      createdAt: recruiter.createdAt,
+    };
+  }
+}

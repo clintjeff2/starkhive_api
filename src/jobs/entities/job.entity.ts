@@ -1,9 +1,22 @@
 import { Application } from 'src/applications/entities/application.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { JobStatus } from 'src/feed/enums/job-status.enum';
+<<<<<<< feature/soft-delete-jobs
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, ManyToOne, DeleteDateColumn } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { ExcludeFromQuery } from '../../common/decorators/exclude-from-query.decorator';
+=======
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  JoinColumn,
+  ManyToOne,
+} from 'typeorm';
+>>>>>>> main
 
 @Entity()
 export class Job {
@@ -19,10 +32,20 @@ export class Job {
   @Column({ default: false })
   isFlagged: boolean;
 
+  @Column('decimal', { nullable: true })
+  budget?: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deadline?: Date;
+
+  main;
+  @Column({ default: true })
+  isAcceptingApplications: boolean;
+
   @Column({
     type: 'enum',
     enum: JobStatus,
-    default: JobStatus.OPEN
+    default: JobStatus.OPEN,
   })
   status: JobStatus;
 
@@ -38,7 +61,6 @@ export class Job {
 
   @Column()
   recruiterId: string;
-
 
   @CreateDateColumn()
   createdAt: Date;
