@@ -1,6 +1,11 @@
 import { Application } from 'src/applications/entities/application.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { JobStatus } from 'src/feed/enums/job-status.enum';
+<<<<<<< feature/soft-delete-jobs
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, ManyToOne, DeleteDateColumn } from 'typeorm';
+import { Exclude } from 'class-transformer';
+import { ExcludeFromQuery } from '../../common/decorators/exclude-from-query.decorator';
+=======
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -11,6 +16,7 @@ import {
   JoinColumn,
   ManyToOne,
 } from 'typeorm';
+>>>>>>> main
 
 @Entity()
 export class Job {
@@ -64,4 +70,9 @@ export class Job {
 
   @Column({ nullable: true })
   freelancer: any;
+
+  @DeleteDateColumn({ name: 'deleted_at' })
+  @Exclude()
+  @ExcludeFromQuery()
+  deletedAt: Date | null;
 }
