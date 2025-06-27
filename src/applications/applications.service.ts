@@ -100,5 +100,23 @@ export class ApplicationsService {
     });
   }
   
-  
+  async getApplicationsWithJobsByFreelancer(freelancerId: string) {
+    return this.applicationRepository.find({
+      where: { freelancerId },
+      relations: ['job'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Helper method to get all applications for a freelancer with job relations
+   * @param freelancerId The ID of the freelancer
+   * @returns List of applications with job details
+   */
+  async getAllApplicationsWithJobsByFreelancer(freelancerId: string): Promise<Application[]> {
+    return this.applicationRepository.find({
+      where: { freelancerId },
+      relations: ['job'],
+    });
+  }
 }

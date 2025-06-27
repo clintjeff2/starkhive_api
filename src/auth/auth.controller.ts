@@ -23,6 +23,8 @@ import { JobsService } from '../jobs/jobs.service';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { GetUsersDto } from './dto/get-users.dto';
 import { SuspendUserDto } from './dto/suspend-user.dto';
+import { PerformanceService } from './performance.service';
+import { PerformanceMetricsDto } from './dto/performance-metrics.dto';
 
 import {
   ApiTags,
@@ -77,6 +79,7 @@ export class AuthController {
     private readonly feedService: FeedService,
     private readonly jobsService: JobsService,
     private readonly logInProvider: LogInProvider,
+    private readonly performanceService: PerformanceService,
   ) {}
 
   @Post('verify-email')
@@ -206,5 +209,10 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'Recruiter not found' })
   async getPublicRecruiterProfile(@Param('recruiterId') recruiterId: string) {
     return this.authService.getPublicRecruiterProfile(recruiterId);
+  }
+
+  @Get('freelancer/:freelancerId/performance-dashboard')
+  async getFreelancerPerformanceDashboard(@Param('freelancerId') freelancerId: string): Promise<PerformanceMetricsDto> {
+    return this.performanceService.getFreelancerPerformance(freelancerId);
   }
 }
