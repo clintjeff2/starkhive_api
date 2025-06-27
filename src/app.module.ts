@@ -18,9 +18,11 @@ import { ApplicationsModule } from './applications/applications.module';
 import { AdminModule } from './admin/admin.module';
 import { ReportsModule } from './reports/reports.module';
 import { Comment } from './feed/entities/comment.entity';
-import { Job } from './jobs/entities/job.entity';
+// import { Job } from './jobs/entities/job.entity';
 import { Portfolio } from './auth/entities/portfolio.entity';
 import { Report } from './reports/entities/report.entity';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 dotenv.config();
 
@@ -34,22 +36,22 @@ dotenv.config();
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        type: 'postgres',  // Force postgres, no fallback to sqlite
+        type: 'postgres', // Force postgres, no fallback to sqlite
         host: configService.get<string>('DB_HOST'),
         port: parseInt(configService.get<string>('DB_PORT') || '5432', 10), // default postgres port
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         entities: [
-          User, 
-          SavedPost, 
-          Post, 
-          Application, 
-          Message, 
-          Comment, 
-          Job, 
+          User,
+          SavedPost,
+          Post,
+          Application,
+          Message,
+          Comment,
+          Job,
           Portfolio,
-          Report
+          Report,
         ],
         synchronize: true, // or false in production
       }),
@@ -64,6 +66,20 @@ dotenv.config();
     AdminModule,
     ReportsModule,
     ApplicationsModule,
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60 * 1000, // 1 minute in ms
+          limit: 100,
+        },
+      ],
+    }),
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: require('./auth/guards/rate-limit.guard').RateLimitGuard,
+    },
   ],
 })
 export class AppModule {}

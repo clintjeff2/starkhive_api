@@ -13,10 +13,20 @@ import { LogInProvider } from './providers/loginProvider';
 import { GenerateTokensProvider } from './providers/generateTokensProvider';
 import { Portfolio } from './entities/portfolio.entity';
 import { EmailToken } from './entities/email-token.entity';
+import { ApiKey } from './entities/api-key.entity';
+import { ApiKeyService } from './services/api-key.service';
+import { ApiKeyController } from './controllers/api-key.controller';
+import { ApiKeyGuard } from './guards/api-key.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, PasswordReset, Portfolio, EmailToken]),
+    TypeOrmModule.forFeature([
+      User,
+      PasswordReset,
+      Portfolio,
+      EmailToken,
+      ApiKey,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -42,8 +52,10 @@ import { EmailToken } from './entities/email-token.entity';
       provide: HashingProvider, // Use the abstract class as a token
       useClass: BcryptProvider, // Bind it to the concrete implementation
     },
+    ApiKeyService,
+    ApiKeyGuard,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, ApiKeyController],
   exports: [
     AuthService,
     TypeOrmModule,

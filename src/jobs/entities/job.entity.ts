@@ -1,78 +1,75 @@
-import { Application } from 'src/applications/entities/application.entity';
-import { User } from 'src/auth/entities/user.entity';
-import { JobStatus } from 'src/feed/enums/job-status.enum';
-<<<<<<< feature/soft-delete-jobs
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, ManyToOne, DeleteDateColumn } from 'typeorm';
-import { Exclude } from 'class-transformer';
-import { ExcludeFromQuery } from '../../common/decorators/exclude-from-query.decorator';
-=======
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-  JoinColumn,
-  ManyToOne,
-} from 'typeorm';
->>>>>>> main
+// import { Application } from 'src/applications/entities/application.entity';
+// import { User } from 'src/auth/entities/user.entity';
+// import { JobStatus } from 'src/feed/enums/job-status.enum';
+// import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, ManyToOne, DeleteDateColumn } from 'typeorm';
+// import { Exclude } from 'class-transformer';
+// import { ExcludeFromQuery } from '../../common/decorators/exclude-from-query.decorator';
+// import {
+//   Entity,
+//   PrimaryGeneratedColumn,
+//   Column,
+//   CreateDateColumn,
+//   UpdateDateColumn,
+//   OneToMany,
+//   JoinColumn,
+//   ManyToOne,
+// } from 'typeorm';
 
-@Entity()
-export class Job {
-  @PrimaryGeneratedColumn()
-  id: number;
+// @Entity()
+// export class Job {
+//   @PrimaryGeneratedColumn()
+//   id: number;
 
-  @Column()
-  title: string;
+//   @Column()
+//   title: string;
 
-  @Column('text')
-  description: string;
+//   @Column('text')
+//   description: string;
 
-  @Column({ default: false })
-  isFlagged: boolean;
+//   @Column({ default: false })
+//   isFlagged: boolean;
 
-  @Column('decimal', { nullable: true })
-  budget?: number;
+//   @Column('decimal', { nullable: true })
+//   budget?: number;
 
-  @Column({ type: 'timestamp', nullable: true })
-  deadline?: Date;
+//   @Column({ type: 'timestamp', nullable: true })
+//   deadline?: Date;
 
-  main;
-  @Column({ default: true })
-  isAcceptingApplications: boolean;
+//   main;
+//   @Column({ default: true })
+//   isAcceptingApplications: boolean;
 
-  @Column({
-    type: 'enum',
-    enum: JobStatus,
-    default: JobStatus.OPEN,
-  })
-  status: JobStatus;
+//   @Column({
+//     type: 'enum',
+//     enum: JobStatus,
+//     default: JobStatus.OPEN,
+//   })
+//   status: JobStatus;
 
-  @OneToMany(() => Application, (application) => application.job)
-  applications: Application[];
+//   @OneToMany(() => Application, (application) => application.job)
+//   applications: Application[];
 
-  @Column()
-  ownerId: number;
+//   @Column()
+//   ownerId: number;
 
-  @ManyToOne(() => User, (user) => user.jobs, { eager: false })
-  @JoinColumn({ name: 'recruiterId' })
-  recruiter: User;
+//   @ManyToOne(() => User, (user) => user.jobs, { eager: false })
+//   @JoinColumn({ name: 'recruiterId' })
+//   recruiter: User;
 
-  @Column()
-  recruiterId: string;
+//   @Column()
+//   recruiterId: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+//   @CreateDateColumn()
+//   createdAt: Date;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
+//   @UpdateDateColumn()
+//   updatedAt: Date;
 
-  @Column({ nullable: true })
-  freelancer: any;
+//   @Column({ nullable: true })
+//   freelancer: any;
 
-  @DeleteDateColumn({ name: 'deleted_at' })
-  @Exclude()
-  @ExcludeFromQuery()
-  deletedAt: Date | null;
-}
+//   @DeleteDateColumn({ name: 'deleted_at' })
+//   @Exclude()
+//   @ExcludeFromQuery()
+//   deletedAt: Date | null;
+// }
