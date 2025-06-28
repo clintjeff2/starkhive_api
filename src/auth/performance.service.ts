@@ -18,33 +18,37 @@ export class PerformanceService {
     private readonly userRepo: Repository<User>,
   ) {}
 
-  async getFreelancerPerformance(freelancerId: string): Promise<PerformanceMetricsDto> {
-    // Application success rate
-    const totalApplications = await this.applicationRepo.count({ where: { freelancerId } });
-    // Use JobStatus enum for status
-    const successfulApplications = await this.applicationRepo.count({ where: { freelancerId, status: JobStatus.APPROVED } });
-    const applicationSuccessRate = totalApplications > 0 ? successfulApplications / totalApplications : 0;
+   async getFreelancerPerformance(freelancerId: string): Promise<PerformanceMetricsDto> {
+    // Single query to get all applications with job relations
+    const applications = await this.applicationRepo.find({
+      where: { freelancerId },
+      relations: ['job'],
+    });
 
-    // Earnings tracking (sum budgets of jobs where freelancer was hired)
-    const jobs = await this.jobRepo.find({ where: { freelancer: freelancerId } });
-    const totalEarnings = jobs.reduce((sum, job) => sum + (job.budget || 0), 0);
-    // Earnings over time (by month)
-    const earningsOverTime: number[] = [];
+    const totalApplications = applications.length;
+    const successfulApplications = applications.filter(app => app.status === JobStatus.APPROVED);
+    const applicationSuccessRate = totalApplications > 0 ? successfulApplications.length / totalApplications : 0;
+
+    // Calculate earnings from approved applications
+    const totalEarnings = successfulApplications.reduce((sum, app) => sum + (app.job?.budget || 0), 0);
+
+    // Earnings over time from approved applications
     const earningsByMonth: { [key: string]: number } = {};
-    jobs.forEach(job => {
-      if (job.createdAt) {
-        const month = job.createdAt.toISOString().slice(0, 7); // YYYY-MM
-        earningsByMonth[month] = (earningsByMonth[month] || 0) + (job.budget || 0);
+    successfulApplications.forEach(app => {
+      if (app.job?.createdAt) {
+        const month = app.job.createdAt.toISOString().slice(0, 7);
+        earningsByMonth[month] = (earningsByMonth[month] || 0) + (app.job.budget || 0);
       }
     });
-    Object.keys(earningsByMonth).sort().forEach(month => earningsOverTime.push(earningsByMonth[month]));
+    const earningsOverTime = Object.keys(earningsByMonth)
+      .sort()
+      .map(month => earningsByMonth[month]);
 
-    // Skill demand analysis (top skills in jobs applied to)
-    const applications = await this.applicationRepo.find({ where: { freelancerId }, relations: ['job'] });
+    // Calculate skill demand from all applications
     const skillCount: Record<string, number> = {};
     applications.forEach(app => {
-      const jobSkills = app.job && app.job['skills'];
-      if (jobSkills && Array.isArray(jobSkills)) {
+      const jobSkills = app.job?.skills;
+      if (Array.isArray(jobSkills)) {
         jobSkills.forEach(skill => {
           skillCount[skill] = (skillCount[skill] || 0) + 1;
         });

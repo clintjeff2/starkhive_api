@@ -13,6 +13,7 @@ import {
   Patch,
   Delete,
   Query,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register-user.dto';
@@ -212,7 +213,14 @@ export class AuthController {
   }
 
   @Get('freelancer/:freelancerId/performance-dashboard')
-  async getFreelancerPerformanceDashboard(@Param('freelancerId') freelancerId: string): Promise<PerformanceMetricsDto> {
-    return this.performanceService.getFreelancerPerformance(freelancerId);
-  }
+  async getFreelancerPerformanceDashboard(
+    @Request() req,
+    @Param('freelancerId') freelancerId: string,
+  ): Promise<PerformanceMetricsDto> {
+    // Only allow freelancers to access their own data or admins to access any
+    if (req.user.id !== freelancerId && req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('You can only access your own performance data');
+    }
+      return this.performanceService.getFreelancerPerformance(freelancerId);
+}
 }
