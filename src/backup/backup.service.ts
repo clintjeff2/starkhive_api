@@ -111,8 +111,18 @@ export class BackupService {
 
       // Upload to S3 if configured
       if (this.s3Client && config.crossRegion) {
-        const s3Key = await this.uploadToS3(filePath, filename);
-        backup.s3Key = s3Key;
+        try {
+          const s3Key = await this.uploadToS3(filePath, filename);
+          backup.s3Key = s3Key;
+          this.logger.log(`Backup ${backupId} uploaded to S3 successfully`);
+        } catch (s3Error) {
+          this.logger.error(
+            `S3 upload failed for backup ${backupId}:`,
+            s3Error,
+          );
+          backup.error = `Local backup completed but S3 upload failed: ${s3Error.message}`;
+          // Consider adding a PARTIALLY_COMPLETED status for this scenario
+        }
       }
 
       await this.backupRepository.save(backup);
@@ -235,8 +245,10 @@ export class BackupService {
   }
 
   async cleanupOldBackups(): Promise<void> {
+    const retentionDays =
+      this.configService.get<number>('BACKUP_RETENTION_DAYS') || 30;
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - 30); // Default 30 days retention
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
     const oldBackups = await this.backupRepository.find({
       where: {
@@ -278,16 +290,29 @@ export class BackupService {
 
     // Delete local file
     if (existsSync(backup.filePath)) {
-      unlinkSync(backup.filePath);
+      try {
+        unlinkSync(backup.filePath);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete local backup file ${backup.filePath}:`,
+          error,
+        );
+        // Continue with S3 deletion and database cleanup
+      }
     }
 
     // Delete from S3
     if (backup.s3Key && this.s3Client) {
-      const command = new DeleteObjectCommand({
-        Bucket: this.configService.get<string>('AWS_BACKUP_BUCKET'),
-        Key: backup.s3Key,
-      });
-      await this.s3Client.send(command);
+      try {
+        const command = new DeleteObjectCommand({
+          Bucket: this.configService.get<string>('AWS_BACKUP_BUCKET'),
+          Key: backup.s3Key,
+        });
+        await this.s3Client.send(command);
+      } catch (error) {
+        this.logger.warn(`Failed to delete S3 backup ${backup.s3Key}:`, error);
+        // Continue with database cleanup
+      }
     }
 
     await this.backupRepository.remove(backup);
