@@ -384,7 +384,14 @@ export class BackupService {
     return new Promise((resolve, reject) => {
       if (response.Body instanceof Readable) {
         response.Body.pipe(writeStream)
-          .on('finish', () => resolve(localPath))
+          .on('finish', () => {
+            // Verify file was created and has content
+            if (existsSync(localPath) && statSync(localPath).size > 0) {
+              resolve(localPath);
+            } else {
+              reject(new Error('Downloaded file is empty or was not created'));
+            }
+          })
           .on('error', reject);
       } else {
         reject(new Error('Invalid S3 response body'));
