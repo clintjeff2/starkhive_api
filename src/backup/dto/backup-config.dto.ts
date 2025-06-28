@@ -18,6 +18,7 @@ export enum BackupStatus {
   IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
   FAILED = 'failed',
+  PARTIALLY_COMPLETED = 'partially_completed',
 }
 
 export class BackupConfigDto {

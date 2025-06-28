@@ -68,6 +68,14 @@ export class BackupService {
           secretAccessKey,
         },
       });
+
+      // Validate bucket configuration when S3 client is initialized
+      const bucket = this.configService.get<string>('AWS_BACKUP_BUCKET');
+      if (!bucket) {
+        this.logger.warn(
+          'S3 client initialized but AWS_BACKUP_BUCKET not configured',
+        );
+      }
     }
   }
 
@@ -126,7 +134,7 @@ export class BackupService {
             s3Error,
           );
           backup.error = `Local backup completed but S3 upload failed: ${s3Error.message}`;
-          // Consider adding a PARTIALLY_COMPLETED status for this scenario
+          backup.status = BackupStatus.PARTIALLY_COMPLETED;
         }
       }
 
@@ -372,6 +380,10 @@ export class BackupService {
   }
 
   private async validateDatabaseExists(database: string): Promise<void> {
+    if (!this.dataSource.isInitialized) {
+      throw new Error('Database connection not initialized');
+    }
+
     const query = 'SELECT 1 FROM pg_database WHERE datname = $1';
     const result = await this.dataSource.query(query, [database]);
     if (result.length === 0) {
