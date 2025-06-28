@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -320,6 +325,11 @@ export class BackupService {
   }
 
   async restoreBackup(config: RestoreConfigDto): Promise<{ message: string }> {
+    // Validate point-in-time recovery is not requested (not supported)
+    if (config.pointInTime) {
+      throw new BadRequestException('Point-in-time recovery not supported');
+    }
+
     const backup = await this.backupRepository.findOne({
       where: { id: config.backupId },
     });
@@ -344,21 +354,29 @@ export class BackupService {
       throw new Error('Backup file not found');
     }
 
-    // Verify backup integrity
+    // Verify backup integrity with case-insensitive comparison
     const currentChecksum = await this.calculateChecksum(filePath);
-    if (currentChecksum !== backup.checksum) {
+    if (currentChecksum.toLowerCase() !== backup.checksum?.toLowerCase()) {
       throw new Error('Backup file integrity check failed');
     }
 
+    // Validate target database exists
+    const targetDatabase = config.targetDatabase || backup.database;
+    await this.validateDatabaseExists(targetDatabase);
+
     // Perform the restore
-    await this.performRestore(
-      filePath,
-      config.targetDatabase || backup.database,
-      isCompressed,
-    );
+    await this.performRestore(filePath, targetDatabase, isCompressed);
 
     this.logger.log(`Backup ${config.backupId} restored successfully`);
     return { message: 'Backup restored successfully' };
+  }
+
+  private async validateDatabaseExists(database: string): Promise<void> {
+    const query = 'SELECT 1 FROM pg_database WHERE datname = $1';
+    const result = await this.dataSource.query(query, [database]);
+    if (result.length === 0) {
+      throw new Error(`Target database '${database}' does not exist`);
+    }
   }
 
   private async downloadFromS3(
