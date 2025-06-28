@@ -15,9 +15,15 @@ import { ExcludeSoftDeleteInterceptor } from 'src/common/interceptors/exclude-so
 
 @Module({
   imports: [
-    FeedModule, 
-    TypeOrmModule.forFeature([Job, Application, SavedJob, Recommendation, User]), 
-    AntiSpamModule
+    FeedModule,
+    TypeOrmModule.forFeature([
+      Job,
+      Application,
+      SavedJob,
+      Recommendation,
+      User,
+    ]),
+    AntiSpamModule,
   ],
   providers: [
     JobsService,

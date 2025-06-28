@@ -1,4 +1,15 @@
-import { IsString, IsOptional, IsNumber, IsArray, IsBoolean, IsObject, ValidateNested, Min, Max, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsArray,
+  IsBoolean,
+  IsObject,
+  ValidateNested,
+  Min,
+  Max,
+  IsDateString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { BudgetRange } from '../types/budget-range.type';
 
@@ -234,4 +245,4 @@ export class ScoreRangeCountDto {
   @IsNumber()
   @Min(0)
   count: number;
-} 
+}

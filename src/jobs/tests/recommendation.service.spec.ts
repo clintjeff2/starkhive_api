@@ -101,7 +101,7 @@ describe('RecommendationService', () => {
     it('should generate recommendations for a user', async () => {
       const userId = 'user-1';
       const options: GetRecommendationsDto = { limit: 10, offset: 0 };
-      
+
       const mockJobs = [
         {
           id: 1,
@@ -164,7 +164,9 @@ describe('RecommendationService', () => {
         updateMetrics: jest.fn(),
       } as any;
 
-      mockRecommendationRepository.findOne.mockResolvedValue(mockRecommendation);
+      mockRecommendationRepository.findOne.mockResolvedValue(
+        mockRecommendation,
+      );
       mockRecommendationRepository.save.mockResolvedValue(mockRecommendation);
 
       await service.updateRecommendationAction(recommendationId, action);
@@ -232,4 +234,4 @@ describe('RecommendationService', () => {
       expect(result.applicationRate).toBe(0);
     });
   });
-}); 
+});

@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Inject,
+} from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, IsNull, DataSource } from 'typeorm';
 
-import { Job } from 'src/job-posting/entities/job.entity';
+import { Job } from './entities/job.entity';
 import { Application } from 'src/applications/entities/application.entity';
 import { SavedJob } from './entities/saved-job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
@@ -40,19 +45,16 @@ export class JobsService {
     const saved = await this.jobRepository.save(job);
 
     try {
-      // Option 1: Using the adapter (if you create it)
-      // const jobForAnalysis = JobAdapter.toJobsEntity(saved);
-
-      // Option 2: Inline mapping (current approach)
+      // Anti-spam analysis with local entity structure
       const jobForAnalysis = {
         ...saved,
         isFlagged: false,
         main: saved.description || '',
-        isAcceptingApplications: saved.status === 'active',
+        isAcceptingApplications: saved.isAcceptingApplications,
         applications: [],
-        ownerId: saved.contactEmail || '',
+        ownerId: saved.ownerId || 0,
         recruiter: null,
-        recruiterId: saved.contactEmail || '',
+        recruiterId: saved.recruiterId || '',
         freelancerts: [],
       } as any;
 
@@ -72,7 +74,8 @@ export class JobsService {
   }
 
   async findAllJobs(includeDeleted: boolean = false): Promise<Job[]> {
-    const query = this.jobRepository.createQueryBuilder('job')
+    const query = this.jobRepository
+      .createQueryBuilder('job')
       .orderBy('job.createdAt', 'DESC');
 
     if (!includeDeleted) {
@@ -82,24 +85,24 @@ export class JobsService {
     return query.getMany();
   }
 
-  async findJobById(id: string): Promise<Job> {
+  async findJobById(id: number): Promise<Job> {
     const job = await this.jobRepository.findOne({ where: { id } });
     if (!job) {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
-    
+
     return job;
   }
 
   async updateJob(
-    id: string,
+    id: number,
     updateJobDto: UpdateJobDto,
-    userId: string,
+    userId: number,
   ): Promise<Job> {
     const job = await this.findJobById(id);
 
-    // Check if the user is the owner of the job (using contactEmail)
-    if (job.contactEmail !== userId) {
+    // Check if the user is the owner of the job
+    if (job.ownerId !== userId) {
       throw new ForbiddenException('Only the job owner can update this job');
     }
 
@@ -107,39 +110,57 @@ export class JobsService {
     return this.jobRepository.save(job);
   }
 
-
-  async removeJob(id: string, userId: string): Promise<{ message: string }> {
+  async removeJob(id: number, userId: number): Promise<{ message: string }> {
     const job = await this.findJobById(id);
-    // Check if the user is the owner of the job (using contactEmail)
-    if (job.contactEmail !== userId) {
+    // Check if the user is the owner of the job
+    if (job.ownerId !== userId) {
       throw new ForbiddenException('Only the job owner can delete this job');
     }
-    
-    // Hard delete the job since this entity doesn't support soft delete
-    await this.jobRepository.remove(job);
-    
+
+    // Soft delete the job using TypeORM's softDelete
+    await this.jobRepository.softDelete(id);
+
     return { message: 'Job deleted successfully' };
   }
-  
-  async restoreJob(id: string, userId: string): Promise<{ message: string }> {
-    // This entity doesn't support soft delete, so we can't restore
-    throw new NotFoundException('Job restoration is not supported');
+
+  async restoreJob(id: number, userId: number): Promise<{ message: string }> {
+    const job = await this.jobRepository.findOne({
+      where: { id },
+      withDeleted: true,
+    });
+
+    if (!job) {
+      throw new NotFoundException(`Job with ID ${id} not found`);
+    }
+
+    if (!job.deletedAt) {
+      throw new NotFoundException('Job is not deleted');
+    }
+
+    // Check if the user is the owner of the job
+    if (job.ownerId !== userId) {
+      throw new ForbiddenException('Only the job owner can restore this job');
+    }
+
+    // Restore the job
+    await this.jobRepository.restore(id);
+
+    return { message: 'Job restored successfully' };
   }
 
   async createApplication(
     createApplicationDto: CreateApplicationDto,
   ): Promise<Application> {
     const job = await this.jobRepository.findOne({
-      where: { id: createApplicationDto.jobId },
+      where: { id: parseInt(createApplicationDto.jobId) },
     });
     if (!job) {
       throw new NotFoundException(
         `Job with ID ${createApplicationDto.jobId} not found`,
       );
     }
-    // Note: The job-posting entity doesn't have isAcceptingApplications
-    // You might need to check job.status instead
-    if (job.status !== 'active') {
+    // Check if the job is accepting applications
+    if (!job.isAcceptingApplications) {
       throw new ForbiddenException('This job is not accepting applications.');
     }
 
@@ -174,9 +195,10 @@ export class JobsService {
     return { message: 'Application removed successfully' };
   }
 
-
   // Weekly analytics for jobs
-  async getWeeklyNewJobsCount(includeDeleted: boolean = false): Promise<Array<{ week: string; count: number }>> {
+  async getWeeklyNewJobsCount(
+    includeDeleted: boolean = false,
+  ): Promise<Array<{ week: string; count: number }>> {
     const query = this.jobRepository
 
       .createQueryBuilder('job')
@@ -187,11 +209,11 @@ export class JobsService {
       .addSelect('COUNT(*)', 'count')
       .groupBy('1')
       .orderBy('1', 'DESC');
-      
+
     if (!includeDeleted) {
       query.andWhere('job.deletedAt IS NULL');
     }
-    
+
     const raw = await query.getRawMany<{ week: string; count: string }>();
 
     return raw.map((r) => ({
@@ -221,45 +243,43 @@ export class JobsService {
   }
 
   async updateJobStatus(
-    id: string,
+    id: number,
     updateStatusDto: UpdateJobStatusDto,
-    userId: string,
+    userId: number,
   ): Promise<Job> {
     const job = await this.findJobById(id);
-    // Note: Adjust this condition based on your ownership logic for the job-posting entity
-    if (job.contactEmail !== userId) {
+    // Check if the user is the owner of the job
+    if (job.ownerId !== userId) {
       throw new ForbiddenException(
         'Only the job owner can update the job status',
       );
     }
 
-    // Map the status to match the Job entity's JobStatus enum
-    // You'll need to adjust this based on your actual JobStatus enum
-    job.status = updateStatusDto.status as any; // Type assertion for now
+    // Update the job status
+    job.status = updateStatusDto.status;
     return this.jobRepository.save(job);
   }
 
   async toggleAcceptingApplications(
-    jobId: string,
+    jobId: number,
     isAccepting: boolean,
-    userId: string,
+    userId: number,
   ): Promise<Job> {
     const job = await this.findJobById(jobId);
-    // Note: Adjust this condition based on your ownership logic
-    if (job.contactEmail !== userId) {
+    // Check if the user is the owner of the job
+    if (job.ownerId !== userId) {
       throw new ForbiddenException(
         'Only the job owner can update this setting',
       );
     }
 
-    // Use the correct JobStatus enum values
-    // You'll need to import and use the correct JobStatus enum
-    job.status = isAccepting ? ('active' as any) : ('inactive' as any);
+    // Update the accepting applications setting
+    job.isAcceptingApplications = isAccepting;
     return this.jobRepository.save(job);
   }
 
   async toggleSaveJob(
-    jobId: string,
+    jobId: number,
     userId: string,
   ): Promise<{ saved: boolean }> {
     await this.findJobById(jobId); // Verify job exists
@@ -320,10 +340,8 @@ export class JobsService {
     const validSortFields: (keyof Job)[] = [
       'createdAt',
       'title',
-      'company',
-      'location',
-      'salaryMin',
-      'salaryMax',
+      'status',
+      'budget',
     ];
     const query = this.jobRepository.createQueryBuilder('job');
 
@@ -340,12 +358,77 @@ export class JobsService {
       .take(safeLimit)
       .getManyAndCount();
 
+    // Convert local Job entities to job-posting Job entities for DTO compatibility
+    const convertedJobs = jobs.map(
+      (job) =>
+        ({
+          id: job.id.toString(),
+          title: job.title,
+          description: job.description,
+          company: 'Unknown', // Local entity doesn't have company
+          location: 'Unknown', // Local entity doesn't have location
+          jobType: 'full_time' as any,
+          status: job.status as any,
+          experienceLevel: 'mid' as any,
+          salaryMin: job.budget || 0,
+          salaryMax: job.budget || 0,
+          salaryCurrency: 'USD',
+          requirements: [],
+          responsibilities: [],
+          benefits: [],
+          skills: [],
+          contactEmail: '',
+          contactPhone: '',
+          applicationDeadline: job.deadline,
+          isRemote: job.isRemote,
+          isUrgent: false,
+          isFeatured: false,
+          viewCount: 0,
+          applicationCount: 0,
+          createdAt: job.createdAt,
+          updatedAt: job.updatedAt,
+        }) as any,
+    );
+
     // Fixed: Use safePage and safeLimit instead of potentially undefined values
-    return new PaginatedJobResponseDto(jobs, total, safePage, safeLimit);
+    return new PaginatedJobResponseDto(
+      convertedJobs,
+      total,
+      safePage,
+      safeLimit,
+    );
   }
 
-  async getSingleJobAsDto(id: string): Promise<JobResponseDto> {
+  async getSingleJobAsDto(id: number): Promise<JobResponseDto> {
     const job = await this.findJobById(id);
-    return new JobResponseDto(job);
+    // Convert local Job entity to job-posting Job entity for DTO compatibility
+    const convertedJob = {
+      id: job.id.toString(),
+      title: job.title,
+      description: job.description,
+      company: 'Unknown',
+      location: 'Unknown',
+      jobType: 'full_time' as any,
+      status: job.status as any,
+      experienceLevel: 'mid' as any,
+      salaryMin: job.budget || 0,
+      salaryMax: job.budget || 0,
+      salaryCurrency: 'USD',
+      requirements: [],
+      responsibilities: [],
+      benefits: [],
+      skills: [],
+      contactEmail: '',
+      contactPhone: '',
+      applicationDeadline: job.deadline,
+      isRemote: job.isRemote,
+      isUrgent: false,
+      isFeatured: false,
+      viewCount: 0,
+      applicationCount: 0,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+    } as any;
+    return new JobResponseDto(convertedJob);
   }
 }

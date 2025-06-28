@@ -117,4 +117,4 @@ export class Recommendation {
     this.clickThroughRate = this.calculateCTR();
     this.applicationRate = this.calculateApplicationRate();
   }
-} 
+}

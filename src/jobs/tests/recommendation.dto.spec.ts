@@ -1,8 +1,8 @@
 import { validate } from 'class-validator';
 import { plainToClass } from 'class-transformer';
-import { 
-  BudgetRangeDto, 
-  UserPreferencesDto, 
+import {
+  BudgetRangeDto,
+  UserPreferencesDto,
   GetRecommendationsDto,
   RecommendationResponseDto,
   ScoringFactorsDto,
@@ -10,7 +10,7 @@ import {
   RecommendationMetricsDto,
   SkillCountDto,
   JobTypeCountDto,
-  ScoreRangeCountDto
+  ScoreRangeCountDto,
 } from '../dto/recommendation.dto';
 
 describe('Recommendation DTOs', () => {
@@ -300,4 +300,4 @@ describe('Recommendation DTOs', () => {
       expect(request.sortOrder).toBe('desc');
     });
   });
-}); 
+});

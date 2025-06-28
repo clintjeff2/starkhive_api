@@ -1,7 +1,14 @@
 import { User } from 'src/auth/entities/user.entity';
 import { JobStatus } from 'src/feed/enums/job-status.enum';
 import { Job } from 'src/jobs/entities/job.entity';
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Unique, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Unique,
+  ManyToOne,
+} from 'typeorm';
 
 @Entity('applications')
 @Unique(['jobId', 'freelancerId'])
@@ -10,14 +17,13 @@ export class Application {
   id: string;
 
   @Column()
-  jobId: string;
+  jobId: number;
 
   @Column()
   freelancerId: string;
 
   @Column()
   recruiterId: string;
-
 
   @ManyToOne(() => User, (user) => user.applications)
   user: User;

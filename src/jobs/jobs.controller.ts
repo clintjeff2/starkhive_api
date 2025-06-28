@@ -16,10 +16,10 @@ import { RecommendationService } from './recommendation.service';
 import { UpdateJobStatusDto } from './dto/update-status.dto';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
-import { 
-  GetRecommendationsDto, 
+import {
+  GetRecommendationsDto,
   UpdateRecommendationActionDto,
-  RecommendationMetricsDto 
+  RecommendationMetricsDto,
 } from './dto/recommendation.dto';
 import { Request as ExpressRequest } from 'express';
 import { AuthGuardGuard } from '../auth/guards/auth.guard';
@@ -57,16 +57,30 @@ export class JobsController {
     if (!req.user?.id) {
       throw new UnauthorizedException('User not authenticated');
     }
-    return this.recommendationService.generateRecommendations(req.user.id, query);
+    return this.recommendationService.generateRecommendations(
+      req.user.id,
+      query,
+    );
   }
 
   @Get('recommendations/metrics')
   @UseGuards(AuthGuardGuard)
-  async getRecommendationMetrics(@Request() req: RequestWithUser): Promise<RecommendationMetricsDto> {
+  async getRecommendationMetrics(
+    @Request() req: RequestWithUser,
+  ): Promise<RecommendationMetricsDto> {
     if (!req.user?.id) {
       throw new UnauthorizedException('User not authenticated');
     }
     return this.recommendationService.getRecommendationMetrics(req.user.id);
+  }
+
+  @Get('saved')
+  @UseGuards(AuthGuardGuard)
+  async getSavedJobs(@Request() req: RequestWithUser) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.jobsService.getSavedJobs(req.user.id);
   }
 
   @Patch('recommendations/:id/action')
@@ -79,7 +93,11 @@ export class JobsController {
     if (!req.user?.id) {
       throw new UnauthorizedException('User not authenticated');
     }
-    await this.recommendationService.updateRecommendationAction(recommendationId, action, req.user.id);
+    await this.recommendationService.updateRecommendationAction(
+      recommendationId,
+      action,
+      req.user.id,
+    );
     return { message: 'Recommendation action updated successfully' };
   }
 
@@ -93,7 +111,11 @@ export class JobsController {
     if (!req.user?.id) {
       throw new UnauthorizedException('User not authenticated');
     }
-    return this.jobsService.updateJobStatus(id, updateStatusDto, req.user.id);
+    return this.jobsService.updateJobStatus(
+      parseInt(id),
+      updateStatusDto,
+      parseInt(req.user.id),
+    );
   }
 
   @Patch(':id/toggle-applications')
@@ -107,15 +129,15 @@ export class JobsController {
       throw new UnauthorizedException('User not authenticated');
     }
     return this.jobsService.toggleAcceptingApplications(
-      id,
+      parseInt(id),
       isAcceptingApplications,
-      req.user.id,
+      parseInt(req.user.id),
     );
   }
 
   @Get(':id')
   async getById(@Param('id') id: string) {
-    return this.jobsService.findJobById(id);
+    return this.jobsService.findJobById(parseInt(id));
   }
 
   @Patch(':id')
@@ -128,31 +150,29 @@ export class JobsController {
     if (!req.user?.id) {
       throw new UnauthorizedException('User not authenticated');
     }
-    return this.jobsService.updateJob(id, updateJobDto, req.user.id);
+    return this.jobsService.updateJob(
+      parseInt(id),
+      updateJobDto,
+      parseInt(req.user.id),
+    );
   }
 
   @Delete(':id')
   @UseGuards(AuthGuardGuard)
-  async removeJob(
-    @Param('id') id: string,
-    @Request() req: RequestWithUser,
-  ) {
+  async removeJob(@Param('id') id: string, @Request() req: RequestWithUser) {
     if (!req.user?.id) {
       throw new UnauthorizedException('User not authenticated');
     }
-    return this.jobsService.removeJob(id, req.user.id);
+    return this.jobsService.removeJob(parseInt(id), parseInt(req.user.id));
   }
 
   @Post(':id/restore')
   @UseGuards(AuthGuardGuard)
-  async restoreJob(
-    @Param('id') id: string,
-    @Request() req: RequestWithUser,
-  ) {
+  async restoreJob(@Param('id') id: string, @Request() req: RequestWithUser) {
     if (!req.user?.id) {
       throw new UnauthorizedException('User not authenticated');
     }
-    return this.jobsService.restoreJob(id, req.user.id);
+    return this.jobsService.restoreJob(parseInt(id), parseInt(req.user.id));
   }
 
   @Post(':id/save')
@@ -164,16 +184,7 @@ export class JobsController {
     if (!req.user?.id) {
       throw new UnauthorizedException('User not authenticated');
     }
-    return this.jobsService.toggleSaveJob(id, req.user.id);
-  }
-
-  @Get('saved')
-  @UseGuards(AuthGuardGuard)
-  async getSavedJobs(@Request() req: RequestWithUser) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.jobsService.getSavedJobs(req.user.id);
+    return this.jobsService.toggleSaveJob(parseInt(id), req.user.id);
   }
 
   @Get(':id/saved')
