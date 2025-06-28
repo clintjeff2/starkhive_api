@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from 'src/auth/entities/user.entity';
 import { Job } from './job.entity';
+import { BudgetRange } from '../types/budget-range.type';
 
 @Entity('recommendations')
 @Index(['userId', 'jobId'], { unique: true })
@@ -52,7 +53,7 @@ export class Recommendation {
     skills?: string[];
     experienceLevel?: string;
     location?: string;
-    budgetRange?: { min: number; max: number };
+    budgetRange?: BudgetRange;
     jobTypes?: string[];
     [key: string]: any;
   };
@@ -106,8 +107,10 @@ export class Recommendation {
   }
 
   calculateApplicationRate(): number {
+    // For a single recommendation: application rate = applications / views
+    // (isApplied is boolean, so 1 if applied, 0 if not)
     if (this.viewCount === 0) return 0;
-    return this.isApplied ? 1 : 0;
+    return this.isApplied ? 1 / this.viewCount : 0;
   }
 
   updateMetrics(): void {

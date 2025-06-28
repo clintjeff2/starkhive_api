@@ -1,4 +1,3 @@
-
 import { Injectable, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -83,20 +82,8 @@ export class JobsService {
     return query.getMany();
   }
 
-<<<<<<< feature/soft-delete-jobs
-  async findJobById(id: number, includeDeleted: boolean = false): Promise<Job> {
-    const query = this.jobRepository.createQueryBuilder('job')
-      .where('job.id = :id', { id });
-
-    if (!includeDeleted) {
-      query.andWhere('job.deletedAt IS NULL');
-    }
-    
-    const job = await query.getOne();
-=======
   async findJobById(id: string): Promise<Job> {
     const job = await this.jobRepository.findOne({ where: { id } });
->>>>>>> main
     if (!job) {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
@@ -111,10 +98,8 @@ export class JobsService {
   ): Promise<Job> {
     const job = await this.findJobById(id);
 
-    // Note: You'll need to check which field represents the owner in the job-posting entity
-    // The second entity doesn't have ownerId, so you might need recruiterId or another field
+    // Check if the user is the owner of the job (using contactEmail)
     if (job.contactEmail !== userId) {
-      // Adjust this condition based on your auth logic
       throw new ForbiddenException('Only the job owner can update this job');
     }
 
@@ -123,43 +108,22 @@ export class JobsService {
   }
 
 
-  async removeJob(id: number, userId: number): Promise<{ message: string }> {
+  async removeJob(id: string, userId: string): Promise<{ message: string }> {
     const job = await this.findJobById(id);
-    // Check if the user is the owner of the job
-    if (job.ownerId !== userId) {
+    // Check if the user is the owner of the job (using contactEmail)
+    if (job.contactEmail !== userId) {
       throw new ForbiddenException('Only the job owner can delete this job');
     }
     
-    // Soft delete the job using TypeORM's softDelete
-    await this.jobRepository.softDelete(id);
+    // Hard delete the job since this entity doesn't support soft delete
+    await this.jobRepository.remove(job);
     
     return { message: 'Job deleted successfully' };
   }
   
-  async restoreJob(id: number, userId: number): Promise<{ message: string }> {
-    const job = await this.jobRepository.findOne({
-      where: { id },
-      withDeleted: true
-    });
-
-    if (!job) {
-
-      throw new NotFoundException(`Job with ID ${id} not found`);
-    }
-
-    if (!job.deletedAt) {
-      throw new NotFoundException('Job is not deleted');
-    }
-    
-    // Check if the user is the owner of the job
-    if (job.ownerId !== userId) {
-      throw new ForbiddenException('Only the job owner can restore this job');
-    }
-    
-    // Restore the job
-    await this.jobRepository.restore(id);
-    
-    return { message: 'Job restored successfully' };
+  async restoreJob(id: string, userId: string): Promise<{ message: string }> {
+    // This entity doesn't support soft delete, so we can't restore
+    throw new NotFoundException('Job restoration is not supported');
   }
 
   async createApplication(

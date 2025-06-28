@@ -95,7 +95,23 @@ GET /jobs/recommendations?limit=20&offset=0&sortBy=score&sortOrder=desc
 - `offset`: Pagination offset (default: 0)
 - `sortBy`: Sort field - 'score', 'createdAt', 'popularity' (default: 'score')
 - `sortOrder`: Sort direction - 'asc', 'desc' (default: 'desc')
-- `preferences`: User preferences object
+- `preferences`: User preferences object with validated budget range
+
+**Example Request Body:**
+```json
+{
+  "preferences": {
+    "skills": ["javascript", "react", "node.js"],
+    "experienceLevel": "mid",
+    "location": "remote",
+    "budgetRange": {
+      "min": 3000,
+      "max": 8000
+    },
+    "jobTypes": ["frontend", "fullstack"]
+  }
+}
+```
 
 **Response:**
 ```json
@@ -185,7 +201,10 @@ const recommendations = await recommendationService.generateRecommendations(
       skills: ['javascript', 'react', 'node.js'],
       experienceLevel: 'mid',
       location: 'remote',
-      budgetRange: { min: 3000, max: 8000 },
+      budgetRange: { 
+        min: 3000, 
+        max: 8000 
+      },
       jobTypes: ['frontend', 'fullstack']
     }
   }

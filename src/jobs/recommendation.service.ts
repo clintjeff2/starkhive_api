@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, Between } from 'typeorm';
 import { Recommendation } from './entities/recommendation.entity';
@@ -12,8 +12,14 @@ import {
   UpdateRecommendationActionDto,
   UserPreferencesDto,
   RecommendationResponseDto,
-  RecommendationMetricsDto 
+  RecommendationMetricsDto,
+  ScoringFactorsDto,
+  JobSummaryDto,
+  SkillCountDto,
+  JobTypeCountDto,
+  ScoreRangeCountDto
 } from './dto/recommendation.dto';
+import { recommendationConfig } from './config/recommendation.config';
 
 @Injectable()
 export class RecommendationService {
@@ -43,13 +49,60 @@ export class RecommendationService {
     // Get user preferences (either from request or stored)
     const userPreferences = preferences || await this.getUserPreferences(userId);
 
-    // Get available jobs
-    const availableJobs = await this.getAvailableJobs();
+    // Get available jobs (filtered by user preferences)
+    let availableJobs = await this.getAvailableJobs();
 
-    // Generate recommendations for each job
+    // Filter jobs by user preferences (skills, location, experience, budget, job type)
+    availableJobs = availableJobs.filter(job => {
+      // Skills filter
+      if (userPreferences.skills && userPreferences.skills.length > 0) {
+        const jobSkills = this.extractSkillsFromJob(job);
+        const hasSkillMatch = userPreferences.skills.some(skill =>
+          jobSkills.includes(skill.toLowerCase())
+        );
+        if (!hasSkillMatch) return false;
+      }
+      // Location filter
+      if (userPreferences.location && userPreferences.location.trim() !== '') {
+        const jobLocation = this.extractLocation(job);
+        if (
+          !jobLocation.toLowerCase().includes(userPreferences.location.toLowerCase()) &&
+          !(userPreferences.location.toLowerCase().includes('remote') && job.isRemote)
+        ) {
+          return false;
+        }
+      }
+      // Experience filter
+      if (userPreferences.experienceLevel) {
+        const jobLevel = this.extractExperienceLevel(job);
+        if (jobLevel !== userPreferences.experienceLevel.toLowerCase()) {
+          return false;
+        }
+      }
+      // Budget filter
+      if (userPreferences.budgetRange && job.budget) {
+        if (
+          job.budget < userPreferences.budgetRange.min ||
+          job.budget > userPreferences.budgetRange.max
+        ) {
+          return false;
+        }
+      }
+      // Job type filter (if job type exists on job)
+      if (userPreferences.jobTypes && userPreferences.jobTypes.length > 0 && (job as any).jobType) {
+        if (!userPreferences.jobTypes.includes((job as any).jobType)) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    // Apply pagination/batch processing to limit jobs processed
+    const jobsToProcess = availableJobs.slice(offset, offset + limit);
+
+    // Generate recommendations for each job in the batch
     const recommendations: Recommendation[] = [];
-    
-    for (const job of availableJobs) {
+    for (const job of jobsToProcess) {
       const existingRecommendation = await this.recommendationRepository.findOne({
         where: { userId, jobId: job.id },
       });
@@ -67,9 +120,8 @@ export class RecommendationService {
 
     // Sort and return recommendations
     const sortedRecommendations = this.sortRecommendations(recommendations, options);
-    const paginatedRecommendations = sortedRecommendations.slice(offset, offset + limit);
-
-    return this.formatRecommendationResponses(paginatedRecommendations);
+    // No need to slice again, already paginated
+    return this.formatRecommendationResponses(sortedRecommendations);
   }
 
   /**
@@ -304,17 +356,22 @@ export class RecommendationService {
       this.getJobSaveCount(job.id),
     ]);
 
-    // Normalize popularity metrics
-    const maxApplications = 100; // Adjust based on your data
-    const maxViews = 1000;
-    const maxSaves = 50;
+    // Normalize popularity metrics using config
+    const maxApplications = recommendationConfig.popularity.maxApplications;
+    const maxViews = recommendationConfig.popularity.maxViews;
+    const maxSaves = recommendationConfig.popularity.maxSaves;
+    const weights = recommendationConfig.popularity.weights;
 
     const applicationScore = Math.min(1.0, applicationCount / maxApplications);
     const viewScore = Math.min(1.0, viewCount / maxViews);
     const saveScore = Math.min(1.0, saveCount / maxSaves);
 
     // Weighted average
-    return (applicationScore * 0.4 + viewScore * 0.3 + saveScore * 0.3);
+    return (
+      applicationScore * weights.applicationScore +
+      viewScore * weights.viewScore +
+      saveScore * weights.saveScore
+    );
   }
 
   /**
@@ -341,6 +398,7 @@ export class RecommendationService {
   async updateRecommendationAction(
     recommendationId: string,
     action: UpdateRecommendationActionDto,
+    userId: string,
   ): Promise<void> {
     const recommendation = await this.recommendationRepository.findOne({
       where: { id: recommendationId },
@@ -350,14 +408,21 @@ export class RecommendationService {
       throw new NotFoundException('Recommendation not found');
     }
 
+    // Security check: ensure user can only update their own recommendations
+    if (recommendation.userId !== userId) {
+      throw new UnauthorizedException('You can only update your own recommendations');
+    }
+
     const now = new Date();
     const { action: actionType, value = true } = action;
 
     switch (actionType) {
       case 'view':
+        if (!recommendation.isViewed && value) {
+          recommendation.viewCount += 1;
+        }
         recommendation.isViewed = value;
         recommendation.viewedAt = value ? now : null;
-        recommendation.viewCount += value ? 1 : 0;
         break;
       case 'apply':
         recommendation.isApplied = value;
@@ -405,7 +470,7 @@ export class RecommendationService {
     const appliedRecommendations = recommendations.filter(rec => rec.isApplied);
     
     const clickThroughRate = viewedRecommendations.length / totalRecommendations;
-    const applicationRate = appliedRecommendations.length / Math.max(viewedRecommendations.length, 1);
+    const applicationRate = appliedRecommendations.length / totalRecommendations;
 
     // Analyze top skills and job types
     const skillCounts = this.analyzeSkills(recommendations);
@@ -554,28 +619,42 @@ export class RecommendationService {
 
     return recommendationsWithJobs
       .filter(({ job }) => job !== null)
-      .map(({ recommendation, job }) => ({
-        id: recommendation.id,
-        jobId: recommendation.jobId,
-        score: recommendation.score,
-        scoringFactors: recommendation.scoringFactors,
-        job: {
+      .map(({ recommendation, job }) => {
+        // Create properly typed objects for validation
+        const scoringFactors: ScoringFactorsDto = {
+          skillMatch: recommendation.scoringFactors?.skillMatch || 0,
+          experienceMatch: recommendation.scoringFactors?.experienceMatch || 0,
+          locationMatch: recommendation.scoringFactors?.locationMatch || 0,
+          budgetMatch: recommendation.scoringFactors?.budgetMatch || 0,
+          userBehavior: recommendation.scoringFactors?.userBehavior || 0,
+          jobPopularity: recommendation.scoringFactors?.jobPopularity || 0,
+        };
+
+        const jobSummary: JobSummaryDto = {
           id: job!.id,
           title: job!.title,
           description: job!.description,
           budget: job!.budget,
-          deadline: job!.deadline,
+          deadline: job!.deadline || undefined,
           status: job!.status,
           createdAt: job!.createdAt,
-        },
-        isViewed: recommendation.isViewed,
-        isApplied: recommendation.isApplied,
-        isSaved: recommendation.isSaved,
-        isDismissed: recommendation.isDismissed,
-        clickThroughRate: recommendation.clickThroughRate,
-        applicationRate: recommendation.applicationRate,
-        createdAt: recommendation.createdAt,
-      }));
+        };
+
+        return {
+          id: recommendation.id,
+          jobId: recommendation.jobId,
+          score: recommendation.score,
+          scoringFactors,
+          job: jobSummary,
+          isViewed: recommendation.isViewed,
+          isApplied: recommendation.isApplied,
+          isSaved: recommendation.isSaved,
+          isDismissed: recommendation.isDismissed,
+          clickThroughRate: recommendation.clickThroughRate || 0,
+          applicationRate: recommendation.applicationRate || 0,
+          createdAt: recommendation.createdAt,
+        } as RecommendationResponseDto;
+      });
   }
 
   private analyzeSkills(recommendations: Recommendation[]): Array<{ skill: string; count: number }> {
