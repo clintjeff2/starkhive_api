@@ -1,12 +1,3 @@
-<<<<<<< feature/soft-delete-jobs
-import { Controller, Post, Body, Get, Param, Patch, Delete, UseGuards } from '@nestjs/common';
-import { JobsService } from './jobs.service';
-import { UpdateJobStatusDto } from './dto/update-status.dto';
-import { CreateJobDto } from './dto/create-job.dto';
-// TODO: Import AuthGuard once authentication is implemented
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
-import { User } from 'src/auth/entities/user.entity';
-=======
 import {
   Controller,
   Post,
@@ -14,12 +5,21 @@ import {
   Get,
   Param,
   Patch,
+  Delete,
   Request,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
+import { RecommendationService } from './recommendation.service';
 import { UpdateJobStatusDto } from './dto/update-status.dto';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
+import { 
+  GetRecommendationsDto, 
+  UpdateRecommendationActionDto,
+  RecommendationMetricsDto 
+} from './dto/recommendation.dto';
 import { Request as ExpressRequest } from 'express';
 
 // Extend Express Request with user property
@@ -28,11 +28,13 @@ interface RequestWithUser extends ExpressRequest {
     id: string;
   };
 }
->>>>>>> main
 
 @Controller('jobs')
 export class JobsController {
-  constructor(private readonly jobsService: JobsService) {}
+  constructor(
+    private readonly jobsService: JobsService,
+    private readonly recommendationService: RecommendationService,
+  ) {}
 
   @Post()
   create(@Body() createJobDto: CreateJobDto) {
@@ -44,34 +46,33 @@ export class JobsController {
     return this.jobsService.findAllJobs();
   }
 
+  @Get('recommendations')
+  async getRecommendations(
+    @Query() query: GetRecommendationsDto,
+    @Request() req: RequestWithUser,
+  ) {
+    const userId = req.user?.id || '1'; // Placeholder - replace with actual auth
+    return this.recommendationService.generateRecommendations(userId, query);
+  }
+
+  @Get('recommendations/metrics')
+  async getRecommendationMetrics(@Request() req: RequestWithUser): Promise<RecommendationMetricsDto> {
+    const userId = req.user?.id || '1'; // Placeholder - replace with actual auth
+    return this.recommendationService.getRecommendationMetrics(userId);
+  }
+
+  @Patch('recommendations/:id/action')
+  async updateRecommendationAction(
+    @Param('id') recommendationId: string,
+    @Body() action: UpdateRecommendationActionDto,
+  ) {
+    await this.recommendationService.updateRecommendationAction(recommendationId, action);
+    return { message: 'Recommendation action updated successfully' };
+  }
+
   @Patch(':id/status')
   async updateStatus(
-<<<<<<< feature/soft-delete-jobs
-    @Param('id', { transform: (value: string) => parseInt(value, 10) }) id: number,
-    @Body() updateStatusDto: UpdateJobStatusDto,
-    @GetUser() user: User,
-  ) {
-    return this.jobsService.updateJobStatus(id, updateStatusDto, user.id);
-  }
-
-  @Delete(':id')
-  // TODO: Add @UseGuards(AuthGuard) once authentication is implemented
-  async removeJob(
-    @Param('id', { transform: (value: string) => parseInt(value, 10) }) id: number,
-    @GetUser() user: User,
-  ) {
-    return this.jobsService.removeJob(id, user.id);
-  }
-
-  @Post(':id/restore')
-  // TODO: Add @UseGuards(AuthGuard) once authentication is implemented
-  async restoreJob(
-    @Param('id', { transform: (value: string) => parseInt(value, 10) }) id: number,
-    @GetUser() user: User,
-  ) {
-    return this.jobsService.restoreJob(id, user.id);
-=======
-    @Param('id') id: string, // Changed from parsing to number
+    @Param('id') id: string,
     @Body() updateStatusDto: UpdateJobStatusDto,
     @Request() req: RequestWithUser,
   ) {
@@ -81,7 +82,7 @@ export class JobsController {
 
   @Patch(':id/toggle-applications')
   async toggleAcceptingApplications(
-    @Param('id') id: string, // Changed from parsing to number
+    @Param('id') id: string,
     @Body('isAcceptingApplications') isAcceptingApplications: boolean,
     @Request() req: RequestWithUser,
   ) {
@@ -95,13 +96,12 @@ export class JobsController {
 
   @Get(':id')
   async getById(@Param('id') id: string) {
-    // Fixed: should be findJobById, not findApplicationById
     return this.jobsService.findJobById(id);
   }
 
   @Patch(':id')
   async updateJob(
-    @Param('id') id: string, // Changed from parsing to number
+    @Param('id') id: string,
     @Body() updateJobDto: UpdateJobDto,
     @Request() req: RequestWithUser,
   ) {
@@ -109,9 +109,27 @@ export class JobsController {
     return this.jobsService.updateJob(id, updateJobDto, userId);
   }
 
+  @Delete(':id')
+  async removeJob(
+    @Param('id') id: string,
+    @Request() req: RequestWithUser,
+  ) {
+    const userId = req.user?.id || '1'; // Placeholder
+    return this.jobsService.removeJob(parseInt(id), parseInt(userId));
+  }
+
+  @Post(':id/restore')
+  async restoreJob(
+    @Param('id') id: string,
+    @Request() req: RequestWithUser,
+  ) {
+    const userId = req.user?.id || '1'; // Placeholder
+    return this.jobsService.restoreJob(parseInt(id), parseInt(userId));
+  }
+
   @Post(':id/save')
   async toggleSaveJob(
-    @Param('id') id: string, // Changed from parsing to number
+    @Param('id') id: string,
     @Request() req: RequestWithUser,
   ) {
     const userId = req.user?.id || '1'; // Placeholder
@@ -128,6 +146,5 @@ export class JobsController {
   async isJobSaved(@Param('id') id: string, @Request() req: RequestWithUser) {
     const userId = req.user?.id || '1'; // Placeholder
     return this.jobsService.isJobSaved(id, userId);
->>>>>>> main
   }
 }

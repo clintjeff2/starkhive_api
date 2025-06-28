@@ -88,6 +88,9 @@ export class Job {
   @Column({ default: false })
   isApproved: boolean
 
+  @Column({ default: false })
+  isRemote: boolean
+
   @Column({ nullable: true })
   approvedById?: string
 
