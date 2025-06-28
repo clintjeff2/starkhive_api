@@ -227,6 +227,7 @@ export class BackupService {
       Bucket: bucket,
       Key: s3Key,
       Body: fileStream,
+      ServerSideEncryption: 'AES256',
     });
 
     await this.s3Client.send(command);

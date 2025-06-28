@@ -13,13 +13,11 @@ export class BackupTask {
     private readonly configService: ConfigService,
   ) {}
 
-  // Daily backup at 2 AM
-  @Cron('0 2 * * *', {
-    name: 'daily-backup',
-    timeZone: 'UTC',
-  })
-  async handleDailyBackup() {
-    this.logger.log('Starting daily backup...');
+  private async executeBackup(
+    retentionDays: number,
+    backupType: string,
+  ): Promise<void> {
+    this.logger.log(`Starting ${backupType} backup...`);
 
     try {
       const database = this.configService.get<string>('DB_NAME');
@@ -29,25 +27,38 @@ export class BackupTask {
 
       // Validate AWS configuration for cross-region backups
       const awsAccessKey = this.configService.get<string>('AWS_ACCESS_KEY_ID');
-      const awsSecretKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
+      const awsSecretKey = this.configService.get<string>(
+        'AWS_SECRET_ACCESS_KEY',
+      );
       const awsBucket = this.configService.get<string>('AWS_BACKUP_BUCKET');
-      
+
       if (!awsAccessKey || !awsSecretKey || !awsBucket) {
-        this.logger.warn('AWS credentials not configured, cross-region backup may fail');
+        this.logger.warn(
+          'AWS credentials not configured, cross-region backup may fail',
+        );
       }
 
       await this.backupService.createBackup({
         type: BackupType.FULL,
         database,
-        retentionDays: 7,
+        retentionDays,
         compression: true,
         crossRegion: true,
       });
 
-      this.logger.log('Daily backup initiated successfully');
+      this.logger.log(`${backupType} backup initiated successfully`);
     } catch (error) {
-      this.logger.error('Daily backup failed:', error);
+      this.logger.error(`${backupType} backup failed:`, error);
     }
+  }
+
+  // Daily backup at 2 AM
+  @Cron('0 2 * * *', {
+    name: 'daily-backup',
+    timeZone: 'UTC',
+  })
+  async handleDailyBackup() {
+    await this.executeBackup(7, 'Daily');
   }
 
   // Weekly backup on Sunday at 1 AM
@@ -56,35 +67,7 @@ export class BackupTask {
     timeZone: 'UTC',
   })
   async handleWeeklyBackup() {
-    this.logger.log('Starting weekly backup...');
-
-    try {
-      const database = this.configService.get<string>('DB_NAME');
-      if (!database) {
-        throw new Error('DB_NAME environment variable is not set');
-      }
-
-      // Validate AWS configuration for cross-region backups
-      const awsAccessKey = this.configService.get<string>('AWS_ACCESS_KEY_ID');
-      const awsSecretKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
-      const awsBucket = this.configService.get<string>('AWS_BACKUP_BUCKET');
-      
-      if (!awsAccessKey || !awsSecretKey || !awsBucket) {
-        this.logger.warn('AWS credentials not configured, cross-region backup may fail');
-      }
-
-      await this.backupService.createBackup({
-        type: BackupType.FULL,
-        database,
-        retentionDays: 30,
-        compression: true,
-        crossRegion: true,
-      });
-
-      this.logger.log('Weekly backup initiated successfully');
-    } catch (error) {
-      this.logger.error('Weekly backup failed:', error);
-    }
+    await this.executeBackup(30, 'Weekly');
   }
 
   // Cleanup old backups daily at 3 AM
