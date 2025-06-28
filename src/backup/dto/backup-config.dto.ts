@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsOptional,
   IsEnum,
+  IsISO8601,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -79,5 +80,6 @@ export class RestoreConfigDto {
 
   @ApiProperty({ description: 'Point in time to restore to', required: false })
   @IsOptional()
+  @IsISO8601()
   pointInTime?: Date;
 }

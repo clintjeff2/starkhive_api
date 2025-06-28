@@ -1,7 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, LessThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import { v4 as uuidv4 } from 'uuid';
 import {
   S3Client,
   PutObjectCommand,
@@ -15,6 +16,7 @@ import {
   unlinkSync,
   statSync,
 } from 'fs';
+import { mkdir } from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createHash } from 'crypto';
@@ -53,9 +55,9 @@ export class BackupService {
     );
     const region = this.configService.get<string>('AWS_REGION');
 
-    if (accessKeyId && secretAccessKey) {
+    if (accessKeyId && secretAccessKey && region) {
       this.s3Client = new S3Client({
-        region: region || 'us-east-1',
+        region,
         credentials: {
           accessKeyId,
           secretAccessKey,
@@ -65,48 +67,37 @@ export class BackupService {
   }
 
   async createBackup(config: BackupConfigDto): Promise<BackupResponseDto> {
+    const backupId = uuidv4();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
     const backup = this.backupRepository.create({
+      id: backupId,
       type: config.type,
       database: config.database,
+      status: BackupStatus.PENDING,
       filePath: '',
-      compression: config.compression,
-      crossRegion: config.crossRegion,
-      retentionDays: config.retentionDays,
+      size: 0,
+      checksum: '',
     });
 
-    const savedBackup = await this.backupRepository.save(backup);
-
-    // Start backup process asynchronously
-    this.performBackup(savedBackup.id, config).catch((error) => {
-      this.logger.error(`Backup ${savedBackup.id} failed:`, error);
-    });
-
-    return this.mapToResponseDto(savedBackup);
-  }
-
-  private async performBackup(
-    backupId: string,
-    config: BackupConfigDto,
-  ): Promise<void> {
-    const backup = await this.backupRepository.findOne({
-      where: { id: backupId },
-    });
-    if (!backup) return;
+    await this.backupRepository.save(backup);
+    this.logger.log(
+      `Starting backup ${backupId} for database ${config.database}`,
+    );
 
     try {
-      backup.status = BackupStatus.IN_PROGRESS;
-      await this.backupRepository.save(backup);
-
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `${config.database}_${timestamp}.sql${config.compression ? '.gz' : ''}`;
       const filePath = join(this.backupDir, filename);
 
-      // Create backup directory if it doesn't exist
-      await execAsync(`mkdir -p ${this.backupDir}`);
+      // Create backup directory if it doesn't exist (using Node.js fs module)
+      await mkdir(this.backupDir, { recursive: true });
 
-      // Generate PostgreSQL dump
-      const dumpCommand = this.buildDumpCommand(config, filePath);
-      await execAsync(dumpCommand);
+      // Generate PostgreSQL dump with secure command execution
+      const { command: dumpCommand, env } = this.buildDumpCommand(
+        config,
+        filePath,
+      );
+      await execAsync(dumpCommand, { env });
 
       // Calculate file size and checksum
       const stats = statSync(filePath);
@@ -132,46 +123,81 @@ export class BackupService {
       await this.backupRepository.save(backup);
       this.logger.error(`Backup ${backupId} failed:`, error);
     }
+
+    return this.mapToResponseDto(backup);
   }
 
-  private buildDumpCommand(config: BackupConfigDto, filePath: string): string {
-    const host = this.configService.get<string>('DB_HOST');
-    const port = this.configService.get<string>('DB_PORT');
-    const username = this.configService.get<string>('DB_USERNAME');
+  private buildDumpCommand(
+    config: BackupConfigDto,
+    filePath: string,
+  ): { command: string; env: NodeJS.ProcessEnv } {
+    const host = this.configService.get<string>('DB_HOST') || 'localhost';
+    const port = this.configService.get<string>('DB_PORT') || '5432';
+    const username =
+      this.configService.get<string>('DB_USERNAME') || 'postgres';
     const password = this.configService.get<string>('DB_PASSWORD');
 
-    let command = `PGPASSWORD=${password} pg_dump -h ${host} -p ${port} -U ${username} -d ${config.database} --verbose --clean --no-owner --no-privileges`;
+    // Use environment variable for password to avoid command line exposure
+    const env = { ...process.env, PGPASSWORD: password };
+
+    // Properly escape shell arguments
+    const escapedArgs = [
+      '-h',
+      this.escapeShellArg(host),
+      '-p',
+      this.escapeShellArg(port),
+      '-U',
+      this.escapeShellArg(username),
+      '-d',
+      this.escapeShellArg(config.database),
+    ];
+
+    let command = `pg_dump ${escapedArgs.join(' ')} --verbose --clean --no-owner --no-privileges`;
 
     if (config.compression) {
-      command += ` | gzip > ${filePath}`;
+      command += ` | gzip > ${this.escapeShellArg(filePath)}`;
     } else {
-      command += ` > ${filePath}`;
+      command += ` > ${this.escapeShellArg(filePath)}`;
     }
 
-    return command;
+    return { command, env };
   }
 
-  private async uploadToS3(
+  private async performRestore(
     filePath: string,
-    filename: string,
-  ): Promise<string> {
-    const bucketName = this.configService.get<string>('AWS_BACKUP_BUCKET');
-    if (!bucketName) {
-      throw new Error('AWS_BACKUP_BUCKET not configured');
+    database: string,
+    compressed: boolean,
+  ): Promise<void> {
+    const host = this.configService.get<string>('DB_HOST') || 'localhost';
+    const port = this.configService.get<string>('DB_PORT') || '5432';
+    const username =
+      this.configService.get<string>('DB_USERNAME') || 'postgres';
+    const password = this.configService.get<string>('DB_PASSWORD');
+
+    const env = { ...process.env, PGPASSWORD: password };
+    const escapedArgs = [
+      '-h',
+      this.escapeShellArg(host),
+      '-p',
+      this.escapeShellArg(port),
+      '-U',
+      this.escapeShellArg(username),
+      '-d',
+      this.escapeShellArg(database),
+    ];
+
+    let command: string;
+    if (compressed) {
+      command = `gunzip -c ${this.escapeShellArg(filePath)} | psql ${escapedArgs.join(' ')}`;
+    } else {
+      command = `psql ${escapedArgs.join(' ')} < ${this.escapeShellArg(filePath)}`;
     }
 
-    const s3Key = `backups/${filename}`;
-    const fileStream = createReadStream(filePath);
+    await execAsync(command, { env });
+  }
 
-    const command = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: s3Key,
-      Body: fileStream,
-      ServerSideEncryption: 'AES256',
-    });
-
-    await this.s3Client.send(command);
-    return s3Key;
+  private escapeShellArg(arg: string): string {
+    return `'${arg.replace(/'/g, "'\"'\"'")}'`;
   }
 
   private async calculateChecksum(filePath: string): Promise<string> {
@@ -185,102 +211,46 @@ export class BackupService {
     });
   }
 
-  async restoreBackup(config: RestoreConfigDto): Promise<{ message: string }> {
-    const backup = await this.backupRepository.findOne({
-      where: { id: config.backupId },
-    });
-    if (!backup) {
-      throw new NotFoundException('Backup not found');
-    }
-
-    if (backup.status !== BackupStatus.COMPLETED) {
-      throw new Error('Backup is not in completed state');
-    }
-
-    try {
-      let filePath = backup.filePath;
-
-      // Download from S3 if needed
-      if (backup.s3Key && !existsSync(filePath)) {
-        filePath = await this.downloadFromS3(backup.s3Key);
-      }
-
-      // Verify backup integrity
-      await this.verifyBackup(backup, filePath);
-
-      // Perform restore
-      const targetDb = config.targetDatabase || backup.database;
-      await this.performRestore(filePath, targetDb, backup.compression);
-
-      this.logger.log(
-        `Backup ${config.backupId} restored successfully to ${targetDb}`,
-      );
-      return { message: 'Backup restored successfully' };
-    } catch (error) {
-      this.logger.error(`Restore failed for backup ${config.backupId}:`, error);
-      throw error;
-    }
-  }
-
-  private async downloadFromS3(s3Key: string): Promise<string> {
-    const bucketName = this.configService.get<string>('AWS_BACKUP_BUCKET');
-    const fileName = s3Key.split('/').pop();
-    if (!fileName) {
-      throw new Error('Invalid S3 key: cannot extract filename');
-    }
-    const localPath = join(this.backupDir, 'temp', fileName);
-
-    const command = new GetObjectCommand({
-      Bucket: bucketName,
-      Key: s3Key,
-    });
-
-    const response = await this.s3Client.send(command);
-    const writeStream = createWriteStream(localPath);
-
-    return new Promise((resolve, reject) => {
-      if (!response.Body) {
-        reject(new Error('No response body from S3'));
-        return;
-      }
-
-      const readableStream = response.Body as NodeJS.ReadableStream;
-      readableStream
-        .pipe(writeStream)
-        .on('finish', () => resolve(localPath))
-        .on('error', reject);
-    });
-  }
-
-  private async verifyBackup(backup: Backup, filePath: string): Promise<void> {
-    if (!existsSync(filePath)) {
-      throw new Error('Backup file not found');
-    }
-
-    const currentChecksum = await this.calculateChecksum(filePath);
-    if (currentChecksum !== backup.checksum) {
-      throw new Error('Backup file integrity check failed');
-    }
-  }
-
-  private async performRestore(
+  private async uploadToS3(
     filePath: string,
-    database: string,
-    compressed: boolean,
-  ): Promise<void> {
-    const host = this.configService.get<string>('DB_HOST');
-    const port = this.configService.get<string>('DB_PORT');
-    const username = this.configService.get<string>('DB_USERNAME');
-    const password = this.configService.get<string>('DB_PASSWORD');
-
-    let command: string;
-    if (compressed) {
-      command = `gunzip -c ${filePath} | PGPASSWORD=${password} psql -h ${host} -p ${port} -U ${username} -d ${database}`;
-    } else {
-      command = `PGPASSWORD=${password} psql -h ${host} -p ${port} -U ${username} -d ${database} < ${filePath}`;
+    filename: string,
+  ): Promise<string> {
+    const bucket = this.configService.get<string>('AWS_BACKUP_BUCKET');
+    if (!bucket) {
+      throw new Error('AWS_BACKUP_BUCKET not configured');
     }
 
-    await execAsync(command);
+    const s3Key = `backups/${filename}`;
+    const fileStream = createReadStream(filePath);
+
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: s3Key,
+      Body: fileStream,
+    });
+
+    await this.s3Client.send(command);
+    return s3Key;
+  }
+
+  async cleanupOldBackups(): Promise<void> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 30); // Default 30 days retention
+
+    const oldBackups = await this.backupRepository.find({
+      where: {
+        createdAt: LessThan(cutoffDate),
+      },
+    });
+
+    for (const backup of oldBackups) {
+      try {
+        await this.deleteBackup(backup.id);
+        this.logger.log(`Cleaned up old backup: ${backup.id}`);
+      } catch (error) {
+        this.logger.error(`Failed to cleanup backup ${backup.id}:`, error);
+      }
+    }
   }
 
   async getBackups(
@@ -323,24 +293,77 @@ export class BackupService {
     return { message: 'Backup deleted successfully' };
   }
 
-  async cleanupOldBackups(): Promise<void> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - 30); // Default 30 days retention
-
-    const oldBackups = await this.backupRepository.find({
-      where: {
-        createdAt: { $lt: cutoffDate } as any,
-      },
+  async restoreBackup(config: RestoreConfigDto): Promise<{ message: string }> {
+    const backup = await this.backupRepository.findOne({
+      where: { id: config.backupId },
     });
 
-    for (const backup of oldBackups) {
-      try {
-        await this.deleteBackup(backup.id);
-        this.logger.log(`Cleaned up old backup: ${backup.id}`);
-      } catch (error) {
-        this.logger.error(`Failed to cleanup backup ${backup.id}:`, error);
-      }
+    if (!backup) {
+      throw new NotFoundException('Backup not found');
     }
+
+    if (backup.status !== BackupStatus.COMPLETED) {
+      throw new Error('Cannot restore from incomplete backup');
+    }
+
+    let filePath = backup.filePath;
+    const isCompressed = filePath.endsWith('.gz');
+
+    // Download from S3 if needed
+    if (backup.s3Key && this.s3Client && !existsSync(filePath)) {
+      filePath = await this.downloadFromS3(backup.s3Key, backup.filePath);
+    }
+
+    if (!existsSync(filePath)) {
+      throw new Error('Backup file not found');
+    }
+
+    // Verify backup integrity
+    const currentChecksum = await this.calculateChecksum(filePath);
+    if (currentChecksum !== backup.checksum) {
+      throw new Error('Backup file integrity check failed');
+    }
+
+    // Perform the restore
+    await this.performRestore(
+      filePath,
+      config.targetDatabase || backup.database,
+      isCompressed,
+    );
+
+    this.logger.log(`Backup ${config.backupId} restored successfully`);
+    return { message: 'Backup restored successfully' };
+  }
+
+  private async downloadFromS3(
+    s3Key: string,
+    localPath: string,
+  ): Promise<string> {
+    const bucket = this.configService.get<string>('AWS_BACKUP_BUCKET');
+    if (!bucket) {
+      throw new Error('AWS_BACKUP_BUCKET not configured');
+    }
+
+    // Ensure directory exists
+    await mkdir(this.backupDir, { recursive: true });
+
+    const command = new GetObjectCommand({
+      Bucket: bucket,
+      Key: s3Key,
+    });
+
+    const response = await this.s3Client.send(command);
+    const writeStream = createWriteStream(localPath);
+
+    return new Promise((resolve, reject) => {
+      if (response.Body instanceof Readable) {
+        response.Body.pipe(writeStream)
+          .on('finish', () => resolve(localPath))
+          .on('error', reject);
+      } else {
+        reject(new Error('Invalid S3 response body'));
+      }
+    });
   }
 
   async getBackupHealth(): Promise<{

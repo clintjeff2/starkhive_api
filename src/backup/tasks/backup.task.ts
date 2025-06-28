@@ -27,6 +27,15 @@ export class BackupTask {
         throw new Error('DB_NAME environment variable is not set');
       }
 
+      // Validate AWS configuration for cross-region backups
+      const awsAccessKey = this.configService.get<string>('AWS_ACCESS_KEY_ID');
+      const awsSecretKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
+      const awsBucket = this.configService.get<string>('AWS_BACKUP_BUCKET');
+      
+      if (!awsAccessKey || !awsSecretKey || !awsBucket) {
+        this.logger.warn('AWS credentials not configured, cross-region backup may fail');
+      }
+
       await this.backupService.createBackup({
         type: BackupType.FULL,
         database,
@@ -53,6 +62,15 @@ export class BackupTask {
       const database = this.configService.get<string>('DB_NAME');
       if (!database) {
         throw new Error('DB_NAME environment variable is not set');
+      }
+
+      // Validate AWS configuration for cross-region backups
+      const awsAccessKey = this.configService.get<string>('AWS_ACCESS_KEY_ID');
+      const awsSecretKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
+      const awsBucket = this.configService.get<string>('AWS_BACKUP_BUCKET');
+      
+      if (!awsAccessKey || !awsSecretKey || !awsBucket) {
+        this.logger.warn('AWS credentials not configured, cross-region backup may fail');
       }
 
       await this.backupService.createBackup({
