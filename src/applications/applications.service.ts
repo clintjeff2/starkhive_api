@@ -100,5 +100,26 @@ export class ApplicationsService {
     });
   }
   
-  
+  /**
++   * Get applications for a freelancer with job relations
++   * @param freelancerId The ID of the freelancer
++   * @param ordered Whether to order by creation date descending
++   * @returns List of applications with job details
++   */
+
+  async getApplicationsWithJobsByFreelancer(
+    freelancerId: string,
+    ordered: boolean = false,
+  ): Promise<Application[]> {
+    const options: any = {
+      where: { freelancerId },
+      relations: ['job'],
+    };
+    
+    if (ordered) {
+      options.order = { createdAt: 'DESC' };
+    }
+    
+   return this.applicationRepository.find(options);
+}
 }
