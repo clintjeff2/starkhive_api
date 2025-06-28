@@ -1,75 +1,109 @@
-// import { Application } from 'src/applications/entities/application.entity';
-// import { User } from 'src/auth/entities/user.entity';
-// import { JobStatus } from 'src/feed/enums/job-status.enum';
-// import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, ManyToOne, DeleteDateColumn } from 'typeorm';
-// import { Exclude } from 'class-transformer';
-// import { ExcludeFromQuery } from '../../common/decorators/exclude-from-query.decorator';
-// import {
-//   Entity,
-//   PrimaryGeneratedColumn,
-//   Column,
-//   CreateDateColumn,
-//   UpdateDateColumn,
-//   OneToMany,
-//   JoinColumn,
-//   ManyToOne,
-// } from 'typeorm';
 
-// @Entity()
-// export class Job {
-//   @PrimaryGeneratedColumn()
-//   id: number;
+import { Application } from "src/applications/entities/application.entity"
+import { User } from "src/auth/entities/user.entity"
+import { JobStatus } from "src/feed/enums/job-status.enum"
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  JoinColumn,
+  ManyToOne,
+  DeleteDateColumn,
+} from "typeorm"
+import { Exclude } from "class-transformer"
+import { ExcludeFromQuery } from "../../common/decorators/exclude-from-query.decorator"
+import { Team } from "../../auth/entities/team.entity"
 
-//   @Column()
-//   title: string;
+@Entity()
+export class Job {
+  @PrimaryGeneratedColumn()
+  id: number
 
-//   @Column('text')
-//   description: string;
+  @Column()
+  title: string
 
-//   @Column({ default: false })
-//   isFlagged: boolean;
+  @Column("text")
+  description: string
 
-//   @Column('decimal', { nullable: true })
-//   budget?: number;
+  @Column({ default: false })
+  isFlagged: boolean
 
-//   @Column({ type: 'timestamp', nullable: true })
-//   deadline?: Date;
+  @Column("decimal", { nullable: true })
+  budget?: number
 
-//   main;
-//   @Column({ default: true })
-//   isAcceptingApplications: boolean;
+  @Column({ type: "timestamp", nullable: true })
+  deadline?: Date
 
-//   @Column({
-//     type: 'enum',
-//     enum: JobStatus,
-//     default: JobStatus.OPEN,
-//   })
-//   status: JobStatus;
+  @Column({ default: true })
+  isAcceptingApplications: boolean
 
-//   @OneToMany(() => Application, (application) => application.job)
-//   applications: Application[];
+  @Column({
+    type: "enum",
+    enum: JobStatus,
+    default: JobStatus.OPEN,
+  })
+  status: JobStatus
 
-//   @Column()
-//   ownerId: number;
+  @OneToMany(
+    () => Application,
+    (application) => application.job,
+  )
+  applications: Application[]
 
-//   @ManyToOne(() => User, (user) => user.jobs, { eager: false })
-//   @JoinColumn({ name: 'recruiterId' })
-//   recruiter: User;
+  @Column()
+  ownerId: number
 
-//   @Column()
-//   recruiterId: string;
+  @ManyToOne(
+    () => User,
+    (user) => user.jobs,
+    { eager: false },
+  )
+  @JoinColumn({ name: "recruiterId" })
+  recruiter: User
 
-//   @CreateDateColumn()
-//   createdAt: Date;
+  @Column()
+  recruiterId: string
 
-//   @UpdateDateColumn()
-//   updatedAt: Date;
+  @CreateDateColumn()
+  createdAt: Date
 
-//   @Column({ nullable: true })
-//   freelancer: any;
+  @UpdateDateColumn()
+  updatedAt: Date
 
-//   @DeleteDateColumn({ name: 'deleted_at' })
-//   @Exclude()
-//   @ExcludeFromQuery()
-//   deletedAt: Date | null;
-// }
+  @Column({ nullable: true })
+  freelancer: any
+
+  @ManyToOne(() => Team, { nullable: true, eager: false })
+  @JoinColumn({ name: "teamId" })
+  team?: Team
+
+  @Column({ nullable: true })
+  teamId?: string
+
+  @Column({ default: false })
+  requiresApproval: boolean
+
+  @Column({ default: false })
+  isApproved: boolean
+
+  @Column({ nullable: true })
+  approvedById?: string
+
+  @Column({ nullable: true })
+  approvedAt?: Date
+
+  @Column({ type: "json", nullable: true })
+  teamSettings?: {
+    sharedWithTeam: boolean
+    allowTeamEditing: boolean
+    notifyTeamOnApplication: boolean
+  }
+
+  @DeleteDateColumn({ name: "deleted_at" })
+  @Exclude()
+  @ExcludeFromQuery()
+  deletedAt: Date | null
+}
