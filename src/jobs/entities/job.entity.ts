@@ -18,6 +18,7 @@ import { Team } from '../../auth/entities/team.entity';
 
 @Entity()
 export class Job {
+  applications: any;
   @PrimaryGeneratedColumn()
   id: number;
 
