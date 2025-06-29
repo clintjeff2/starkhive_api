@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Delete,
   Request,
   Query,
 } from '@nestjs/common';
@@ -13,14 +14,8 @@ import { UpdateJobStatusDto } from './dto/update-status.dto';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { SearchJobsDto } from './dto/search-jobs.dto';
-import { Request as ExpressRequest } from 'express';
-
-// Extend Express Request with user property
-interface RequestWithUser extends ExpressRequest {
-  user?: {
-    id: string;
-  };
-}
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { User } from 'src/auth/entities/user.entity';
 
 @Controller('jobs')
 export class JobsController {
@@ -41,28 +36,9 @@ export class JobsController {
     return this.jobsService.advancedSearchJobs(query);
   }
 
-  @Patch(':id/status')
-  async updateStatus(
-    @Param('id') id: string,
-    @Body() updateStatusDto: UpdateJobStatusDto,
-    @Request() req: RequestWithUser,
-  ) {
-    const userId = req.user?.id || '1'; // Placeholder
-    return this.jobsService.updateJobStatus(id, updateStatusDto, userId);
-  }
-
-  @Patch(':id/toggle-applications')
-  async toggleAcceptingApplications(
-    @Param('id') id: string,
-    @Body('isAcceptingApplications') isAcceptingApplications: boolean,
-    @Request() req: RequestWithUser,
-  ) {
-    const userId = req.user?.id || '1'; // Placeholder
-    return this.jobsService.toggleAcceptingApplications(
-      id,
-      isAcceptingApplications,
-      userId,
-    );
+  @Get('saved')
+  async getSavedJobs(@GetUser() user: User) {
+    return this.jobsService.getSavedJobs(user.id);
   }
 
   @Get(':id')
@@ -70,34 +46,60 @@ export class JobsController {
     return this.jobsService.findJobById(id);
   }
 
+  @Get(':id/saved')
+  async isJobSaved(@Param('id') id: string, @GetUser() user: User) {
+    return this.jobsService.isJobSaved(id, user.id);
+  }
+
   @Patch(':id')
   async updateJob(
     @Param('id') id: string,
     @Body() updateJobDto: UpdateJobDto,
-    @Request() req: RequestWithUser,
+    @GetUser() user: User,
   ) {
-    const userId = req.user?.id || '1'; // Placeholder
-    return this.jobsService.updateJob(id, updateJobDto, userId);
+    return this.jobsService.updateJob(id, updateJobDto, user.id);
+  }
+
+  @Patch(':id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() updateStatusDto: UpdateJobStatusDto,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.updateJobStatus(id, updateStatusDto, user.id);
+  }
+
+  @Patch(':id/toggle-applications')
+  async toggleAcceptingApplications(
+    @Param('id') id: string,
+    @Body('isAcceptingApplications') isAcceptingApplications: boolean,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.toggleAcceptingApplications(
+      id,
+      isAcceptingApplications,
+      user.id,
+    );
   }
 
   @Post(':id/save')
-  async toggleSaveJob(
+  async toggleSaveJob(@Param('id') id: string, @GetUser() user: User) {
+    return this.jobsService.toggleSaveJob(id, user.id);
+  }
+
+  @Post(':id/restore')
+  async restoreJob(
     @Param('id') id: string,
-    @Request() req: RequestWithUser,
+    @GetUser() user: User,
   ) {
-    const userId = req.user?.id || '1'; // Placeholder
-    return this.jobsService.toggleSaveJob(id, userId);
+    return this.jobsService.restoreJob(id, user.id);
   }
 
-  @Get('saved')
-  async getSavedJobs(@Request() req: RequestWithUser) {
-    const userId = req.user?.id || '1'; // Placeholder
-    return this.jobsService.getSavedJobs(userId);
-  }
-
-  @Get(':id/saved')
-  async isJobSaved(@Param('id') id: string, @Request() req: RequestWithUser) {
-    const userId = req.user?.id || '1'; // Placeholder
-    return this.jobsService.isJobSaved(id, userId);
+  @Delete(':id')
+  async removeJob(
+    @Param('id') id: string,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.removeJob(id, user.id);
   }
 }
