@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification, NotificationType } from './entities/notification.entity';
+import { ApplicationStatus } from 'src/applications/entities/application.entity';
 
 export interface NotificationPayload {
   recruiterId: string;
@@ -13,6 +14,9 @@ export interface NotificationPayload {
 
 @Injectable()
 export class NotificationsService {
+  notifyStatusChange(id: string, status: ApplicationStatus) {
+    throw new Error('Method not implemented.');
+  }
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
