@@ -18,11 +18,15 @@ import { TeamMember } from './entities/team-member.entity';
 import { TeamActivity } from './entities/team-activity.entity';
 import { TeamService } from './services/team.service';
 import { MailModule } from 'src/mail/mail.module';
+import { ApiKey } from './entities/api-key.entity';
+import { ApiKeyService } from './services/api-key.service';
+import { ApiKeyGuard } from './guards/api-key.guard';
+import { ApiKeyController } from './controllers/api-key.controller';
 
 @Module({
   imports: [
     MailModule,
-    ConfigModule.forRoot(), // Make sure ConfigModule is properly configured
+    ConfigModule.forRoot(),
     TypeOrmModule.forFeature([
       User,
       PasswordReset,
@@ -31,6 +35,7 @@ import { MailModule } from 'src/mail/mail.module';
       Team,
       TeamMember,
       TeamActivity,
+      ApiKey,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -45,26 +50,31 @@ import { MailModule } from 'src/mail/mail.module';
           signOptions: { expiresIn: '1h' },
         };
       },
-      global: true, // Make JWT module global
+      global: true,
     }),
   ],
+  controllers: [AuthController, ApiKeyController],
   providers: [
     AuthService,
     TeamService,
     LogInProvider,
     GenerateTokensProvider,
-    JwtService, // Explicitly add JwtService
+    JwtService,
+    MailService,
+    ApiKeyService,
+    ApiKeyGuard,
     {
       provide: HashingProvider,
       useClass: BcryptProvider,
     },
   ],
-  controllers: [AuthController],
   exports: [
     AuthService,
     TeamService,
     TypeOrmModule,
     HashingProvider,
+    MailService,
+    JwtService,
     GenerateTokensProvider,
   ],
 })

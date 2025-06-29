@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Post,
@@ -24,19 +25,19 @@ interface RequestWithUser extends ExpressRequest {
   };
 }
 
-@Controller('jobs')
-export class JobsController {
-  constructor(private readonly jobsService: JobsService) {}
+// @Controller('jobs')
+// export class JobsController {
+//   constructor(private readonly jobsService: JobsService) {}
 
-  @Post()
-  create(@Body() createJobDto: CreateJobDto) {
-    return this.jobsService.createJob(createJobDto);
-  }
+//   @Post()
+//   create(@Body() createJobDto: CreateJobDto) {
+//     return this.jobsService.createJob(createJobDto);
+//   }
 
-  @Get()
-  findAll() {
-    return this.jobsService.findAllJobs();
-  }
+//   @Get()
+//   findAll() {
+//     return this.jobsService.findAllJobs();
+//   }
 
   @Get('saved')
   async getSavedJobs(@GetUser() user: User) {
@@ -105,3 +106,4 @@ export class JobsController {
     return this.jobsService.removeJob(id, user.id); // user.id is string UUID
   }
 }
+

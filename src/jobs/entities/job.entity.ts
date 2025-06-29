@@ -1,6 +1,7 @@
 import { Application } from 'src/applications/entities/application.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { JobStatus } from 'src/feed/enums/job-status.enum';
+
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -18,7 +19,6 @@ import { Team } from '../../auth/entities/team.entity';
 
 @Entity()
 export class Job {
-  applications: any;
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -31,7 +31,6 @@ export class Job {
   @Column({ default: false })
   isFlagged: boolean;
 
-  // Skills field - stored as JSON array of strings
   @Column({ type: 'json', nullable: true })
   skills?: string[];
 
@@ -54,9 +53,8 @@ export class Job {
   @OneToMany(() => Application, (application) => application.job)
   applications: Application[];
 
-  // Keep both for backward compatibility, but make sure they're consistent
   @Column()
-  ownerId: string; // Changed to string to match recruiterId
+  ownerId: string;
 
   @ManyToOne(() => User, (user) => user.jobs, { eager: false })
   @JoinColumn({ name: 'recruiterId' })
@@ -103,5 +101,5 @@ export class Job {
   @DeleteDateColumn({ name: 'deleted_at' })
   @Exclude()
   @ExcludeFromQuery()
-  deletedAt?: Date; // Made optional to match TypeORM's DeleteDateColumn behavior
+  deletedAt?: Date;
 }

@@ -1,3 +1,4 @@
+
 import {
   Injectable,
   NotFoundException,
@@ -390,3 +391,4 @@ export class JobsService {
     return new JobResponseDto(convertedJob);
   }
 }
+
