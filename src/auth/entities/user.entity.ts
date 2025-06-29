@@ -34,9 +34,10 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @OneToMany(() => Application, (application) => application.user)
-  applications: Application[];
-
+  @ApiProperty({
+    description: 'Password for the user',
+    example: 'hashed_password',
+  })
   @Column()
   password: string;
 
@@ -51,6 +52,9 @@ export class User {
   })
   role: UserRole;
 
+  @OneToMany(() => Application, (application) => application.user)
+  applications: Application[];
+
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
 
@@ -62,8 +66,6 @@ export class User {
 
   @OneToMany(() => TeamMember, (teamMember) => teamMember.user)
   teamMemberships: TeamMember[];
-
-  notifications: any;
 
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolios: Portfolio[];
@@ -79,6 +81,7 @@ export class User {
 
   @Column({ default: false })
   isSuspended: boolean;
+
   @ApiProperty({
     description: 'Whether the user has verified their email',
     example: false,
@@ -95,4 +98,8 @@ export class User {
   })
   @CreateDateColumn()
   createdAt: Date;
+
+  // Add this only if you have a Notification entity in the future
+  // @OneToMany(() => Notification, (notification) => notification.user)
+  // notifications: Notification[];
 }

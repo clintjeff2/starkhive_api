@@ -9,6 +9,9 @@ import type { Repository } from 'typeorm';
 import type { User } from './entities/user.entity';
 import type { Portfolio } from './entities/portfolio.entity';
 import type { EmailToken } from './entities/email-token.entity';
+import { User } from './entities/user.entity';
+import { Portfolio } from './entities/portfolio.entity';
+import { EmailToken } from './entities/email-token.entity';
 import * as bcrypt from 'bcryptjs';
 import type { RegisterDto } from './dto/register-user.dto';
 import type { CreatePortfolioDto } from './dto/create-portfolio.dto';
@@ -16,11 +19,14 @@ import type { JwtService } from '@nestjs/jwt';
 import { addHours } from 'date-fns';
 import * as crypto from 'crypto';
 import type { PasswordReset } from './entities/password-reset.entity';
+import { PasswordReset } from './entities/password-reset.entity';
 import type { MailService } from '../mail/mail.service';
 import type { ConfigService } from '@nestjs/config';
 import type { LogInDto } from './dto/loginDto';
 import type { LogInProvider } from './providers/loginProvider';
 import type { TeamService } from './services/team.service';
+import { InjectRepository } from '@nestjs/typeorm';
+
 
 @Injectable()
 export class AuthService {
@@ -61,15 +67,19 @@ export class AuthService {
   private readonly EMAIL_TOKEN_EXPIRATION_HOURS = 24; // 24 hours
 
   constructor(
-    private readonly mailService: MailService,
+    @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Portfolio)
     private readonly portfolioRepository: Repository<Portfolio>,
+    @InjectRepository(EmailToken)
     private readonly emailTokenRepository: Repository<EmailToken>,
     private readonly jwtService: JwtService,
+    @InjectRepository(PasswordReset)
     private readonly passwordResetRepository: Repository<PasswordReset>,
     private readonly configService: ConfigService,
     private readonly loginProvider: LogInProvider,
     private readonly teamService: TeamService,
+    private readonly mailService: MailService,
   ) {
     this.allowedMimeTypes = this.configService.get<string[]>(
       'portfolio.allowedMimeTypes',

@@ -1,16 +1,10 @@
-import {
-  NotificationsService,
-  NotificationPayload,
-} from '../notifications/notifications.service';
-import {
-  Injectable,
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { NotificationsService, NotificationPayload } from '../notifications/notifications.service';
+import { Injectable, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Application } from './entities/application.entity';
 import { Job } from 'src/jobs/entities/job.entity';
+import { UpdateStatusDto } from './dto/update-status.dto';
 
 @Injectable()
 export class ApplicationsService {
@@ -19,7 +13,7 @@ export class ApplicationsService {
     private readonly applicationRepository: Repository<Application>,
     private readonly notificationsService: NotificationsService,
 
-    @InjectRepository(Job) // 👈 This is required!
+    @InjectRepository(Job) 
     private jobRepository: Repository<Job>,
   ) {}
 
@@ -77,12 +71,12 @@ export class ApplicationsService {
       };
       await this.notificationsService.sendNotification(notificationPayload);
     } catch (error) {
+
       // Log error but don't fail the application creation
 
-      console.error(
-        `Failed to send notification for application ${application.id}:`,
-        error,
-      );
+     
+      console.error(`Failed to send notification for application ${application.id}:`, error);
+
     }
 
     return application;
@@ -118,12 +112,11 @@ export class ApplicationsService {
 
   
   /**
-+   * Get applications for a freelancer with job relations
-+   * @param freelancerId The ID of the freelancer
-+   * @param ordered Whether to order by creation date descending
-+   * @returns List of applications with job details
-+   */
-
+   * Get applications for a freelancer with job relations
+   * @param freelancerId The ID of the freelancer
+   * @param ordered Whether to order by creation date descending
+   * @returns List of applications with job details
+   */
   async getApplicationsWithJobsByFreelancer(
     freelancerId: string,
     ordered: boolean = false,
@@ -137,7 +130,27 @@ export class ApplicationsService {
       options.order = { createdAt: 'DESC' };
     }
     
-   return this.applicationRepository.find(options);
-}
+    return this.applicationRepository.find(options);
+  }
+
+  async updateStatus(id: string, dto: UpdateStatusDto): Promise<Application> {
+    const app = await this.applicationRepository.findOneBy({ id });
+    if (!app) throw new NotFoundException('Application not found');
+
+    app.status = dto.status;
+
+    app.statusHistory.push({
+      status: dto.status,
+      updatedAt: new Date(),
+      updatedBy: dto.updatedBy || 'system',
+    });
+
+    await this.applicationRepository.save(app);
+
+    // Trigger notification (pseudo)
+    this.notificationsService?.notifyStatusChange(app.id, dto.status);
+
+    return app;
+  }
 
 }

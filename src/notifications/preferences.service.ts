@@ -9,6 +9,15 @@ import { Repository } from 'typeorm';
 import { CreatePreferencesDto } from './dto/create-preferences.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import { User } from '../auth/entities/user.entity';
+import { ApplicationStatus } from 'src/applications/entities/application.entity';
+
+@Injectable()
+export class NotificationService {
+  notifyStatusChange(applicationId: string, status: ApplicationStatus) {
+    
+    console.log(`Notify: Application ${applicationId} changed to ${status}`);
+  }
+}
 
 @Injectable()
 export class PreferencesService {

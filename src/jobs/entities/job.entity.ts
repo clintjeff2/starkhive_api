@@ -30,6 +30,9 @@ export class Job {
   @Column({ default: false })
   isFlagged: boolean;
 
+  @Column({ type: 'json', nullable: true })
+  skills?: string[];
+
   @Column('decimal', { nullable: true })
   budget?: number;
 
@@ -50,7 +53,7 @@ export class Job {
   applications: Application[];
 
   @Column()
-  ownerId: number;
+  ownerId: string;
 
   @ManyToOne(() => User, (user) => user.jobs, { eager: false })
   @JoinColumn({ name: 'recruiterId' })
@@ -100,5 +103,5 @@ export class Job {
   @DeleteDateColumn({ name: 'deleted_at' })
   @Exclude()
   @ExcludeFromQuery()
-  deletedAt: Date | null;
+  deletedAt?: Date;
 }

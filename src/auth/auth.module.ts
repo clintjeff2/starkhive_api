@@ -17,9 +17,16 @@ import { Team } from './entities/team.entity';
 import { TeamMember } from './entities/team-member.entity';
 import { TeamActivity } from './entities/team-activity.entity';
 import { TeamService } from './services/team.service';
+import { MailModule } from 'src/mail/mail.module';
+import { ApiKey } from './entities/api-key.entity';
+import { ApiKeyService } from './services/api-key.service';
+import { ApiKeyGuard } from './guards/api-key.guard';
+import { ApiKeyController } from './controllers/api-key.controller';
 
 @Module({
   imports: [
+    MailModule,
+    ConfigModule.forRoot(),
     TypeOrmModule.forFeature([
       User,
       PasswordReset,
@@ -28,11 +35,12 @@ import { TeamService } from './services/team.service';
       Team,
       TeamMember,
       TeamActivity,
+      ApiKey,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
+      useFactory: async (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET');
         if (!secret) {
           throw new Error('JWT_SECRET environment variable is required');
@@ -42,8 +50,10 @@ import { TeamService } from './services/team.service';
           signOptions: { expiresIn: '1h' },
         };
       },
+      global: true,
     }),
   ],
+  controllers: [AuthController, ApiKeyController],
   providers: [
     AuthService,
     TeamService,
@@ -51,12 +61,13 @@ import { TeamService } from './services/team.service';
     GenerateTokensProvider,
     JwtService,
     MailService,
+    ApiKeyService,
+    ApiKeyGuard,
     {
-      provide: HashingProvider, // Use the abstract class as a token
-      useClass: BcryptProvider, // Bind it to the concrete implementation
+      provide: HashingProvider,
+      useClass: BcryptProvider,
     },
   ],
-  controllers: [AuthController],
   exports: [
     AuthService,
     TeamService,

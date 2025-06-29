@@ -18,6 +18,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ValidationExceptionFilter } from './common/filters/validation-exception.filter';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { SecurityMiddleware } from './auth/middleware/security.middleware';
 
 const logger = new Logger('Bootstrap');
 
@@ -33,7 +34,8 @@ async function bootstrap() {
   const port = configService.get('PORT') || 3000;
 
   // Security Middleware
-  app.use(helmet());
+  // app.use(helmet());
+  app.use(SecurityMiddleware);
   app.use(compression());
 
   // Trust proxy if behind a reverse proxy (e.g., Nginx, Heroku, etc.)

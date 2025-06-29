@@ -10,6 +10,7 @@ import {
   Query,
   UseGuards,
   UnauthorizedException,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { RecommendationService } from './recommendation.service';
@@ -21,15 +22,9 @@ import {
   UpdateRecommendationActionDto,
   RecommendationMetricsDto,
 } from './dto/recommendation.dto';
-import { Request as ExpressRequest } from 'express';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { User } from 'src/auth/entities/user.entity';
 import { AuthGuardGuard } from '../auth/guards/auth.guard';
-
-// Extend Express Request with user property
-interface RequestWithUser extends ExpressRequest {
-  user: {
-    id: string;
-  };
-}
 
 @Controller('jobs')
 export class JobsController {
@@ -38,161 +33,143 @@ export class JobsController {
     private readonly recommendationService: RecommendationService,
   ) {}
 
+  // Create a job
   @Post()
-  create(@Body() createJobDto: CreateJobDto) {
-    return this.jobsService.createJob(createJobDto);
+  @UseGuards(AuthGuardGuard)
+  createJob(@Body() createJobDto: CreateJobDto, @GetUser() user: User) {
+    return this.jobsService.createJob(createJobDto, user.id);
   }
 
+  // Get all jobs
   @Get()
-  findAll() {
+  findAllJobs() {
     return this.jobsService.findAllJobs();
   }
 
+  // Get a single job by ID
+  @Get(':id')
+  findJobById(@Param('id', ParseIntPipe) id: number) {
+    return this.jobsService.findJobById(id);
+  }
+
+  // Update a job
+  @Patch(':id')
+  @UseGuards(AuthGuardGuard)
+  updateJob(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateJobDto: UpdateJobDto,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.updateJob(id, updateJobDto, user.id);
+  }
+
+  // Update job status
+  @Patch(':id/status')
+  @UseGuards(AuthGuardGuard)
+  updateJobStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateStatusDto: UpdateJobStatusDto,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.updateJobStatus(id, updateStatusDto, user.id);
+  }
+
+  // Toggle job accepting applications
+  @Patch(':id/toggle-applications')
+  @UseGuards(AuthGuardGuard)
+  toggleAcceptingApplications(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('isAcceptingApplications') isAcceptingApplications: boolean,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.toggleAcceptingApplications(
+      id,
+      isAcceptingApplications,
+      user.id,
+    );
+  }
+
+  // Delete a job
+  @Delete(':id')
+  @UseGuards(AuthGuardGuard)
+  removeJob(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.removeJob(id, user.id);
+  }
+
+  // Restore a deleted job
+  @Post(':id/restore')
+  @UseGuards(AuthGuardGuard)
+  restoreJob(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.restoreJob(id, user.id);
+  }
+
+  // Save/Unsave job
+  @Post(':id/save')
+  @UseGuards(AuthGuardGuard)
+  toggleSaveJob(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.toggleSaveJob(id, user.id);
+  }
+
+  // Check if job is saved
+  @Get(':id/saved')
+  @UseGuards(AuthGuardGuard)
+  isJobSaved(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.isJobSaved(id, user.id);
+  }
+
+  // Get all saved jobs
+  @Get('saved')
+  @UseGuards(AuthGuardGuard)
+  getSavedJobs(@GetUser() user: User) {
+    return this.jobsService.getSavedJobs(user.id);
+  }
+
+  // Get job recommendations
   @Get('recommendations')
   @UseGuards(AuthGuardGuard)
-  async getRecommendations(
+  getRecommendations(
     @Query() query: GetRecommendationsDto,
-    @Request() req: RequestWithUser,
+    @GetUser() user: User,
   ) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
     return this.recommendationService.generateRecommendations(
-      req.user.id,
+      user.id,
       query,
     );
   }
 
+  // Get recommendation metrics
   @Get('recommendations/metrics')
   @UseGuards(AuthGuardGuard)
-  async getRecommendationMetrics(
-    @Request() req: RequestWithUser,
+  getRecommendationMetrics(
+    @GetUser() user: User,
   ): Promise<RecommendationMetricsDto> {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.recommendationService.getRecommendationMetrics(req.user.id);
+    return this.recommendationService.getRecommendationMetrics(user.id);
   }
 
-  @Get('saved')
-  @UseGuards(AuthGuardGuard)
-  async getSavedJobs(@Request() req: RequestWithUser) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.jobsService.getSavedJobs(req.user.id);
-  }
-
+  // Update recommendation interaction (e.g., like/dislike)
   @Patch('recommendations/:id/action')
   @UseGuards(AuthGuardGuard)
-  async updateRecommendationAction(
+  updateRecommendationAction(
     @Param('id') recommendationId: string,
     @Body() action: UpdateRecommendationActionDto,
-    @Request() req: RequestWithUser,
+    @GetUser() user: User,
   ) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    await this.recommendationService.updateRecommendationAction(
+    return this.recommendationService.updateRecommendationAction(
       recommendationId,
       action,
-      req.user.id,
+      user.id,
     );
-    return { message: 'Recommendation action updated successfully' };
-  }
-
-  @Patch(':id/status')
-  @UseGuards(AuthGuardGuard)
-  async updateStatus(
-    @Param('id') id: string,
-    @Body() updateStatusDto: UpdateJobStatusDto,
-    @Request() req: RequestWithUser,
-  ) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.jobsService.updateJobStatus(
-      parseInt(id),
-      updateStatusDto,
-      parseInt(req.user.id),
-    );
-  }
-
-  @Patch(':id/toggle-applications')
-  @UseGuards(AuthGuardGuard)
-  async toggleAcceptingApplications(
-    @Param('id') id: string,
-    @Body('isAcceptingApplications') isAcceptingApplications: boolean,
-    @Request() req: RequestWithUser,
-  ) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.jobsService.toggleAcceptingApplications(
-      parseInt(id),
-      isAcceptingApplications,
-      parseInt(req.user.id),
-    );
-  }
-
-  @Get(':id')
-  async getById(@Param('id') id: string) {
-    return this.jobsService.findJobById(parseInt(id));
-  }
-
-  @Patch(':id')
-  @UseGuards(AuthGuardGuard)
-  async updateJob(
-    @Param('id') id: string,
-    @Body() updateJobDto: UpdateJobDto,
-    @Request() req: RequestWithUser,
-  ) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.jobsService.updateJob(
-      parseInt(id),
-      updateJobDto,
-      parseInt(req.user.id),
-    );
-  }
-
-  @Delete(':id')
-  @UseGuards(AuthGuardGuard)
-  async removeJob(@Param('id') id: string, @Request() req: RequestWithUser) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.jobsService.removeJob(parseInt(id), parseInt(req.user.id));
-  }
-
-  @Post(':id/restore')
-  @UseGuards(AuthGuardGuard)
-  async restoreJob(@Param('id') id: string, @Request() req: RequestWithUser) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.jobsService.restoreJob(parseInt(id), parseInt(req.user.id));
-  }
-
-  @Post(':id/save')
-  @UseGuards(AuthGuardGuard)
-  async toggleSaveJob(
-    @Param('id') id: string,
-    @Request() req: RequestWithUser,
-  ) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.jobsService.toggleSaveJob(parseInt(id), req.user.id);
-  }
-
-  @Get(':id/saved')
-  @UseGuards(AuthGuardGuard)
-  async isJobSaved(@Param('id') id: string, @Request() req: RequestWithUser) {
-    if (!req.user?.id) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-    return this.jobsService.isJobSaved(id, req.user.id);
   }
 }

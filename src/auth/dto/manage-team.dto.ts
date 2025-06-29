@@ -15,6 +15,9 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { TeamRole, TeamMemberStatus } from '../entities/team-member.entity';
+import { TeamRole } from '../enums/teamRole.enum';
+import { TeamMemberStatus } from '../enums/teamMemberStatus.enum';
+
 
 export class CreateTeamDto {
   @ApiProperty({

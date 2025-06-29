@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   Req,
 } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards, ConflictException, Get, Param, ParseIntPipe, Req, Patch } from '@nestjs/common';
 import { ApplicationsService } from './applications.service';
 import { ApplyJobDto } from './dto/apply-job.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.strategy';
@@ -18,7 +19,8 @@ import { Roles } from '../auth/decorators/role.decorator';
 import { UserRole } from '../auth/enums/userRole.enum';
 import { User } from 'src/auth/entities/user.entity';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
-
+import { UpdateStatusDto } from './dto/update-status.dto';
+import { Application } from './entities/application.entity';
 @Controller('applications')
 export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
@@ -56,6 +58,15 @@ export class ApplicationsController {
     }));
   }
 
+@Patch(':id/status')
+updateStatus(
+  @Param('id') id: string,
+  @Body() dto: UpdateStatusDto,
+): Promise<Application> {
+  return this.applicationsService.updateStatus(id, dto);
+}
+
+
   @Get('job/:jobId')
   @UseGuards(JwtAuthGuard)
   async getApplicationsByJob(@Param('jobId') jobId: number, @Req() req: any) {
@@ -63,3 +74,4 @@ export class ApplicationsController {
     return this.applicationsService.findApplicationsByJobId(jobId, recruiterId);
   }
 }
+

@@ -8,11 +8,20 @@ import {
   CreateDateColumn,
   Unique,
   ManyToOne,
+  BaseEntity,
 } from 'typeorm';
+
+export enum ApplicationStatus {
+  SUBMITTED = 'submitted',
+  UNDER_REVIEW = 'under_review',
+  SHORTLISTED = 'shortlisted',
+  REJECTED = 'rejected',
+  ACCEPTED = 'accepted',
+}
 
 @Entity('applications')
 @Unique(['jobId', 'freelancerId'])
-export class Application {
+export class Application extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -32,7 +41,21 @@ export class Application {
   job: Job;
 
   @Column({ type: 'enum', enum: JobStatus, default: JobStatus.OPEN })
-  status: JobStatus;
+  jobStatus: JobStatus;
+
+  @Column({
+    type: 'enum',
+    enum: ApplicationStatus,
+    default: ApplicationStatus.SUBMITTED,
+  })
+  status: ApplicationStatus;
+
+  @Column('jsonb', { default: [] })
+  statusHistory: {
+    status: ApplicationStatus;
+    updatedAt: Date;
+    updatedBy?: string;
+  }[];
 
   @Column('text')
   coverLetter: string;
