@@ -1,6 +1,6 @@
-import { Application } from "src/applications/entities/application.entity"
-import { User } from "src/auth/entities/user.entity"
-import { JobStatus } from "src/feed/enums/job-status.enum"
+import { Application } from 'src/applications/entities/application.entity';
+import { User } from 'src/auth/entities/user.entity';
+import { JobStatus } from 'src/feed/enums/job-status.enum';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -11,98 +11,96 @@ import {
   JoinColumn,
   ManyToOne,
   DeleteDateColumn,
-} from "typeorm"
-import { Exclude } from "class-transformer"
-import { ExcludeFromQuery } from "../../common/decorators/exclude-from-query.decorator"
-import { Team } from "../../auth/entities/team.entity"
+} from 'typeorm';
+import { Exclude } from 'class-transformer';
+import { ExcludeFromQuery } from '../../common/decorators/exclude-from-query.decorator';
+import { Team } from '../../auth/entities/team.entity';
 
 @Entity()
 export class Job {
   @PrimaryGeneratedColumn()
-  id: number
+  id: number;
 
   @Column()
-  title: string
+  title: string;
 
-  @Column("text")
-  description: string
+  @Column('text')
+  description: string;
 
   @Column({ default: false })
-  isFlagged: boolean
+  isFlagged: boolean;
 
-  @Column("decimal", { nullable: true })
-  budget?: number
+  // Skills field - stored as JSON array of strings
+  @Column({ type: 'json', nullable: true })
+  skills?: string[];
 
-  @Column({ type: "timestamp", nullable: true })
-  deadline?: Date
+  @Column('decimal', { nullable: true })
+  budget?: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deadline?: Date;
 
   @Column({ default: true })
-  isAcceptingApplications: boolean
+  isAcceptingApplications: boolean;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: JobStatus,
     default: JobStatus.OPEN,
   })
-  status: JobStatus
+  status: JobStatus;
 
-  @OneToMany(
-    () => Application,
-    (application) => application.job,
-  )
-  applications: Application[]
+  @OneToMany(() => Application, (application) => application.job)
+  applications: Application[];
+
+  // Keep both for backward compatibility, but make sure they're consistent
+  @Column()
+  ownerId: string; // Changed to string to match recruiterId
+
+  @ManyToOne(() => User, (user) => user.jobs, { eager: false })
+  @JoinColumn({ name: 'recruiterId' })
+  recruiter: User;
 
   @Column()
-  ownerId: number
-
-  @ManyToOne(
-    () => User,
-    (user) => user.jobs,
-    { eager: false },
-  )
-  @JoinColumn({ name: "recruiterId" })
-  recruiter: User
-
-  @Column()
-  recruiterId: string
+  recruiterId: string;
 
   @CreateDateColumn()
-  createdAt: Date
+  createdAt: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date
+  updatedAt: Date;
 
   @Column({ nullable: true })
-  freelancer: any
+  freelancer: any;
 
   @ManyToOne(() => Team, { nullable: true, eager: false })
-  @JoinColumn({ name: "teamId" })
-  team?: Team
+  @JoinColumn({ name: 'teamId' })
+  team?: Team;
 
   @Column({ nullable: true })
-  teamId?: string
+  teamId?: string;
 
   @Column({ default: false })
-  requiresApproval: boolean
+  requiresApproval: boolean;
 
   @Column({ default: false })
-  isApproved: boolean
+  isApproved: boolean;
 
   @Column({ nullable: true })
-  approvedById?: string
+  approvedById?: string;
 
   @Column({ nullable: true })
-  approvedAt?: Date
+  approvedAt?: Date;
 
-  @Column({ type: "json", nullable: true })
+  @Column({ type: 'json', nullable: true })
   teamSettings?: {
-    sharedWithTeam: boolean
-    allowTeamEditing: boolean
-    notifyTeamOnApplication: boolean
-  }
+    sharedWithTeam: boolean;
+    allowTeamEditing: boolean;
+    notifyTeamOnApplication: boolean;
+  };
 
-  @DeleteDateColumn({ name: "deleted_at" })
+  @DeleteDateColumn({ name: 'deleted_at' })
   @Exclude()
   @ExcludeFromQuery()
-  deletedAt: Date | null
+  deletedAt?: Date; // Made optional to match TypeORM's DeleteDateColumn behavior
 }
