@@ -9,11 +9,14 @@ import { FeedModule } from 'src/feed/feed.module';
 import { Job } from './entities/job.entity';
 import { SavedJob } from './entities/saved-job.entity';
 import { ExcludeSoftDeleteInterceptor } from 'src/common/interceptors/exclude-soft-delete.interceptor';
-
-
+import { JobTemplate } from './entities/job-template.entity';
 
 @Module({
-  imports: [FeedModule, TypeOrmModule.forFeature([Job, Application, SavedJob]), AntiSpamModule],
+  imports: [
+    FeedModule,
+    TypeOrmModule.forFeature([Job, Application, SavedJob, JobTemplate]),
+    AntiSpamModule,
+  ],
   providers: [
     JobsService,
     {
