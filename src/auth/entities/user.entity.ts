@@ -36,6 +36,7 @@ export class User {
 
   @Column()
   password: string
+  applications: any;
 
   @ApiProperty({
     description: "Role of the user",

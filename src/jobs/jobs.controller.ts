@@ -8,28 +8,37 @@ import {
   Delete,
   Request,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { UpdateJobStatusDto } from './dto/update-status.dto';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { SearchJobsDto } from './dto/search-jobs.dto';
+import { Request as ExpressRequest } from 'express';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from 'src/auth/entities/user.entity';
 
-@Controller('jobs')
-export class JobsController {
-  constructor(private readonly jobsService: JobsService) {}
+// Extend Express Request with user property
+interface RequestWithUser extends ExpressRequest {
+  user?: {
+    id: string;
+  };
+}
 
-  @Post()
-  create(@Body() createJobDto: CreateJobDto) {
-    return this.jobsService.createJob(createJobDto);
-  }
+// @Controller('jobs')
+// export class JobsController {
+//   constructor(private readonly jobsService: JobsService) {}
 
-  @Get()
-  findAll() {
-    return this.jobsService.findAllJobs();
-  }
+//   @Post()
+//   create(@Body() createJobDto: CreateJobDto) {
+//     return this.jobsService.createJob(createJobDto);
+//   }
+
+//   @Get()
+//   findAll() {
+//     return this.jobsService.findAllJobs();
+//   }
 
   @Get('search')
   async advancedSearch(@Query() query: SearchJobsDto) {
@@ -46,11 +55,6 @@ export class JobsController {
     return this.jobsService.findJobById(id);
   }
 
-  @Get(':id/saved')
-  async isJobSaved(@Param('id') id: string, @GetUser() user: User) {
-    return this.jobsService.isJobSaved(id, user.id);
-  }
-
   @Patch(':id')
   async updateJob(
     @Param('id') id: string,
@@ -63,10 +67,19 @@ export class JobsController {
   @Patch(':id/status')
   async updateStatus(
     @Param('id') id: string,
-    @Body() updateStatusDto: UpdateJobStatusDto,
+
+    @Get(':id/saved')
+  async isJobSaved(@Param('id') id: number, @GetUser() user: User) {
+    return this.jobsService.isJobSaved(id, user.id);
+  }
+
+  @Patch(':id')
+  async updateJob(
+    @Param('id') id: number,
+    @Body() updateJobDto: UpdateJobDto,
     @GetUser() user: User,
   ) {
-    return this.jobsService.updateJobStatus(id, updateStatusDto, user.id);
+    return this.jobsService.updateJob(id, updateJobDto, user.id);
   }
 
   @Patch(':id/toggle-applications')
@@ -103,3 +116,4 @@ export class JobsController {
     return this.jobsService.removeJob(id, user.id);
   }
 }
+
