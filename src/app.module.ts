@@ -26,8 +26,9 @@ import { Portfolio } from './auth/entities/portfolio.entity';
 import { Report } from './reports/entities/report.entity';
 import { BackupModule } from './backup/backup.module';
 import { Backup } from './backup/entities/backup.entity';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { RateLimitGuard } from './auth/guards/rate-limit.guard';
 
 dotenv.config();
 
@@ -44,7 +45,10 @@ dotenv.config();
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get<string>('DB_HOST'),
-        port: Number.parseInt(configService.get<string>('DB_PORT') || '5432', 10),
+        port: Number.parseInt(
+          configService.get<string>('DB_PORT') || '5432',
+          10,
+        ),
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
@@ -77,7 +81,7 @@ dotenv.config();
     ApplicationsModule,
     BackupModule,
 
-    // ✅ Rate limiting module merged from API-Rate-Limiting-and-Security-Enhancement
+    // Rate limiting module
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -90,7 +94,7 @@ dotenv.config();
   providers: [
     {
       provide: APP_GUARD,
-      useClass: require('./auth/guards/rate-limit.guard').RateLimitGuard,
+      useClass: RateLimitGuard,
     },
   ],
 })

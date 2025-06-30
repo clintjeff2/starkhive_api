@@ -6,10 +6,10 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import type { Repository } from 'typeorm';
-import type { Team } from '../entities/team.entity';
-import { type TeamMember } from '../entities/team-member.entity';
-import { type TeamActivity } from '../entities/team-activity.entity';
-import type { User } from '../entities/user.entity';
+import { Team } from '../entities/team.entity';
+import { TeamMember } from '../entities/team-member.entity';
+import { TeamActivity } from '../entities/team-activity.entity';
+import { User } from '../entities/user.entity';
 import type {
   CreateTeamDto,
   UpdateTeamDto,
@@ -24,25 +24,23 @@ import { UserRole } from '../enums/userRole.enum';
 import { TeamRole } from '../enums/teamRole.enum';
 import { TeamMemberStatus } from '../enums/teamMemberStatus.enum';
 import { ActivityType } from '../enums/activityType.enum';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class TeamService {
-  private readonly teamRepository: Repository<Team>;
-  private readonly teamMemberRepository: Repository<TeamMember>;
-  private readonly teamActivityRepository: Repository<TeamActivity>;
-  private readonly userRepository: Repository<User>;
-
   constructor(
-    teamRepository: Repository<Team>,
-    teamMemberRepository: Repository<TeamMember>,
-    teamActivityRepository: Repository<TeamActivity>,
-    userRepository: Repository<User>,
-  ) {
-    this.teamRepository = teamRepository;
-    this.teamMemberRepository = teamMemberRepository;
-    this.teamActivityRepository = teamActivityRepository;
-    this.userRepository = userRepository;
-  }
+    @InjectRepository(Team)
+    private readonly teamRepository: Repository<Team>,
+
+    @InjectRepository(TeamMember)
+    private readonly teamMemberRepository: Repository<TeamMember>,
+
+    @InjectRepository(TeamActivity)
+    private readonly teamActivityRepository: Repository<TeamActivity>,
+
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
 
   async createTeam(
     ownerId: string,

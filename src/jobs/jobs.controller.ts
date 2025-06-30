@@ -1,4 +1,3 @@
-
 import {
   Controller,
   Post,
@@ -25,19 +24,19 @@ interface RequestWithUser extends ExpressRequest {
   };
 }
 
-// @Controller('jobs')
-// export class JobsController {
-//   constructor(private readonly jobsService: JobsService) {}
+@Controller('jobs')
+export class JobsController {
+  constructor(private readonly jobsService: JobsService) {}
 
-//   @Post()
-//   create(@Body() createJobDto: CreateJobDto) {
-//     return this.jobsService.createJob(createJobDto);
-//   }
+  @Post()
+  create(@Body() createJobDto: CreateJobDto) {
+    return this.jobsService.createJob(createJobDto);
+  }
 
-//   @Get()
-//   findAll() {
-//     return this.jobsService.findAllJobs();
-//   }
+  @Get()
+  findAll() {
+    return this.jobsService.findAllJobs();
+  }
 
   @Get('saved')
   async getSavedJobs(@GetUser() user: User) {
@@ -45,18 +44,21 @@ interface RequestWithUser extends ExpressRequest {
   }
 
   @Get(':id')
-  async getById(@Param('id') id: number) {
+  async getById(@Param('id', ParseIntPipe) id: number) {
     return this.jobsService.findJobById(id);
   }
 
   @Get(':id/saved')
-  async isJobSaved(@Param('id') id: number, @GetUser() user: User) {
+  async isJobSaved(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: User,
+  ) {
     return this.jobsService.isJobSaved(id, user.id);
   }
 
   @Patch(':id')
   async updateJob(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateJobDto: UpdateJobDto,
     @GetUser() user: User,
   ) {
@@ -65,7 +67,7 @@ interface RequestWithUser extends ExpressRequest {
 
   @Patch(':id/status')
   async updateStatus(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateStatusDto: UpdateJobStatusDto,
     @GetUser() user: User,
   ) {
@@ -74,7 +76,7 @@ interface RequestWithUser extends ExpressRequest {
 
   @Patch(':id/toggle-applications')
   async toggleAcceptingApplications(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body('isAcceptingApplications') isAcceptingApplications: boolean,
     @GetUser() user: User,
   ) {
@@ -86,7 +88,10 @@ interface RequestWithUser extends ExpressRequest {
   }
 
   @Post(':id/save')
-  async toggleSaveJob(@Param('id') id: number, @GetUser() user: User) {
+  async toggleSaveJob(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: User,
+  ) {
     return this.jobsService.toggleSaveJob(id, user.id);
   }
 
@@ -106,4 +111,3 @@ interface RequestWithUser extends ExpressRequest {
     return this.jobsService.removeJob(id, user.id); // user.id is string UUID
   }
 }
-
