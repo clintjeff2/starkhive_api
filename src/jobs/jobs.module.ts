@@ -9,6 +9,7 @@ import { FeedModule } from 'src/feed/feed.module';
 import { Job } from './entities/job.entity';
 import { SavedJob } from './entities/saved-job.entity';
 import { ExcludeSoftDeleteInterceptor } from 'src/common/interceptors/exclude-soft-delete.interceptor';
+import { BlockchainService } from './blockchain/blockchain.service';
 
 
 
@@ -20,6 +21,7 @@ import { ExcludeSoftDeleteInterceptor } from 'src/common/interceptors/exclude-so
       provide: APP_INTERCEPTOR,
       useClass: ExcludeSoftDeleteInterceptor,
     },
+    BlockchainService,
   ],
 
   controllers: [JobsController],

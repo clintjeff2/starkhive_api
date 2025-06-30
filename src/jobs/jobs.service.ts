@@ -1,4 +1,3 @@
-
 import {
   Injectable,
   NotFoundException,
@@ -71,6 +70,9 @@ export class JobsService {
     const options: any = {
       order: { createdAt: 'DESC' },
     };
+    const query = this.jobRepository
+      .createQueryBuilder('job')
+      .orderBy('job.createdAt', 'DESC');
 
     if (includeDeleted) {
       options.withDeleted = true;

@@ -16,6 +16,7 @@ import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { TeamRole } from '../enums/teamRole.enum';
 import { TeamMemberStatus } from '../enums/teamMemberStatus.enum';
+// import { TeamRole, TeamMemberStatus } from '../entities/team-member.entity';
 
 export class CreateTeamDto {
   @ApiProperty({
@@ -165,6 +166,8 @@ export class UpdateTeamMemberDto {
 
   @ApiProperty({
     description: 'Status of the team member',
+    enum: TeamMemberStatus,
+    required: false,
   })
   @IsOptional()
   @IsEnum(TeamMemberStatus)
