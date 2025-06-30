@@ -7,15 +7,15 @@ import {
 } from '@nestjs/common';
 import type { Repository } from 'typeorm';
 import type { Team } from '../entities/team.entity';
-import {
-  type TeamMember,
-  TeamRole,
-  TeamMemberStatus,
-} from '../entities/team-member.entity';
-import {
-  type TeamActivity,
-  ActivityType,
-} from '../entities/team-activity.entity';
+// import {
+//   type TeamMember,
+//   TeamRole,
+//   TeamMemberStatus,
+// } from '../entities/team-member.entity';
+// import {
+//   type TeamActivity,
+//   ActivityType,
+// } from '../entities/team-activity.entity';
 import type { User } from '../entities/user.entity';
 import type {
   CreateTeamDto,
@@ -28,6 +28,11 @@ import type {
   GetTeamsDto,
 } from '../dto/manage-team.dto';
 import { UserRole } from '../enums/userRole.enum';
+import { TeamMember } from '../entities/team-member.entity';
+import { TeamActivity } from '../entities/team-activity.entity';
+import { TeamRole } from '../enums/teamRole.enum';
+import { TeamMemberStatus } from '../enums/teamMemberStatus.enum';
+import { ActivityType } from '../enums/activityType.enum';
 
 @Injectable()
 export class TeamService {

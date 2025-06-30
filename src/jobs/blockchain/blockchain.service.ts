@@ -5,6 +5,12 @@ import { Provider, RpcProvider, Contract } from 'starknet';
 import { Transaction } from '../entities/transaction.entity';
 import { TransactionStatus } from '../enums/transaction-status.enum';
 
+// Define a type for Starknet transaction receipt with relevant properties
+interface StarknetTxReceipt {
+  finality_status?: string;
+  execution_status?: string;
+}
+
 @Injectable()
 export class BlockchainService {
   private readonly logger = new Logger(BlockchainService.name);
@@ -39,7 +45,7 @@ export class BlockchainService {
   /**
    * Make a payment by calling the smart contract
    * @param recipient - Starknet address to send payment to
-   * @param amount - Amount to send
+   * @param amount - Amount to send (as string for precision)
    * @param abi - Contract ABI
    * @param contractAddress - Contract address
    */
@@ -53,8 +59,9 @@ export class BlockchainService {
   ): Promise<string> {
     try {
       const contract = this.getContract(contractAddress, abi);
-      // Replace 'transfer' with your contract's payment function name
-      const tx = await contract.invoke('transfer', [recipient, amount]);
+      // Convert amount to number for contract call, but keep as string for DB
+      const numericAmount = Number(amount);
+      const tx = await contract.invoke('transfer', [recipient, numericAmount]);
       this.logger.log(`Payment transaction sent: ${tx.transaction_hash}`);
       // Log transaction as pending
       await this.logTransaction({
@@ -62,7 +69,7 @@ export class BlockchainService {
         status: TransactionStatus.PENDING,
         from,
         to: recipient,
-        amount,
+        amount, // store as string
         type,
       });
       return tx.transaction_hash;
@@ -89,15 +96,15 @@ export class BlockchainService {
    */
   async trackTransactionStatus(txHash: string): Promise<TransactionStatus> {
     try {
-      const txReceipt = await this.provider.getTransactionReceipt(txHash);
+      const txReceipt = (await this.provider.getTransactionReceipt(
+        txHash,
+      )) as StarknetTxReceipt | null;
       let status: TransactionStatus = TransactionStatus.PENDING;
       if (!txReceipt) {
         status = TransactionStatus.PENDING;
       } else {
         const chainStatus =
-          (txReceipt as any).finality_status ||
-          (txReceipt as any).execution_status ||
-          'unknown';
+          txReceipt.finality_status || txReceipt.execution_status || 'unknown';
         switch (chainStatus) {
           case 'ACCEPTED_ON_L1':
           case 'ACCEPTED_ON_L2':

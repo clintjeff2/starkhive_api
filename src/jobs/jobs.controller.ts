@@ -9,6 +9,7 @@ import {
   Delete,
   ParseIntPipe,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { UpdateJobStatusDto } from './dto/update-status.dto';
@@ -151,14 +152,26 @@ export class JobsController {
   async payForJob(
     @Param('id') id: string,
     @Body() paymentDto: PaymentRequestDto,
-    @Request() req: RequestWithUser,
+    @GetUser() user: User,
   ) {
     // You may want to fetch contractAddress and abi from config or DB
     const { recipient, amount, abi, contractAddress, type } = paymentDto;
     if (!contractAddress) {
       throw new NotFoundException('contractAddress is required');
     }
-    const from = req.user?.id || '1';
+    if (!user?.id) {
+      throw new UnauthorizedException('User must be authenticated to make a payment');
+    }
+    // Validate job existence
+    const job = await this.jobsService.findJobById(Number(id));
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    // Example: Only the job owner (recruiter) can pay for the job
+    if (job.recruiterId !== user.id) {
+      throw new UnauthorizedException('You are not authorized to pay for this job');
+    }
+    const from = user.id;
     // Call blockchain service to make payment
     return this.blockchainService.makePayment(
       recipient,
