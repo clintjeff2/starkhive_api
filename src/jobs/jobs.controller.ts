@@ -1,4 +1,3 @@
-
 import {
   Controller,
   Post,
@@ -17,6 +16,7 @@ import { UpdateJobDto } from './dto/update-job.dto';
 import { Request as ExpressRequest } from 'express';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from 'src/auth/entities/user.entity';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 // Extend Express Request with user property
 interface RequestWithUser extends ExpressRequest {
@@ -25,19 +25,21 @@ interface RequestWithUser extends ExpressRequest {
   };
 }
 
-// @Controller('jobs')
-// export class JobsController {
-//   constructor(private readonly jobsService: JobsService) {}
+@ApiTags('jobs')
+@ApiBearerAuth('jwt-auth')
+@Controller('jobs')
+export class JobsController {
+  constructor(private readonly jobsService: JobsService) {}
 
-//   @Post()
-//   create(@Body() createJobDto: CreateJobDto) {
-//     return this.jobsService.createJob(createJobDto);
-//   }
+  @Post()
+  create(@Body() createJobDto: CreateJobDto) {
+    return this.jobsService.createJob(createJobDto);
+  }
 
-//   @Get()
-//   findAll() {
-//     return this.jobsService.findAllJobs();
-//   }
+  @Get()
+  findAll() {
+    return this.jobsService.findAllJobs();
+  }
 
   @Get('saved')
   async getSavedJobs(@GetUser() user: User) {
@@ -55,6 +57,11 @@ interface RequestWithUser extends ExpressRequest {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a job listing (recruiter only)' })
+  @ApiResponse({ status: 200, description: 'Job updated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Only the job owner can update this job.' })
+  @ApiResponse({ status: 404, description: 'Job not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updateJob(
     @Param('id') id: number,
     @Body() updateJobDto: UpdateJobDto,

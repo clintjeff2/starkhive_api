@@ -73,7 +73,7 @@
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.7",
     "@types/compression": "^1.8.1",
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.3",
     "@types/helmet": "^0.0.48",
     "@types/http-cache-semantics": "^4.0.4",
     "@types/jest": "^29.5.14",
