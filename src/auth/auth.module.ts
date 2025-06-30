@@ -25,6 +25,7 @@ import { ApiKeyController } from './controllers/api-key.controller';
 import { PerformanceService } from './performance.service';
 import { Application } from 'src/applications/entities/application.entity';
 import { Job } from 'src/jobs/entities/job.entity';
+import { SkillVerification } from './entities/skills-verification.entity';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { Job } from 'src/jobs/entities/job.entity';
       TeamActivity,
       Application,
       ApiKey,
+      SkillVerification,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

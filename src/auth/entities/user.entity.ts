@@ -17,6 +17,7 @@ import { Like } from '../../feed/entities/like.entity';
 import { EmailToken } from './email-token.entity';
 import { TeamMember } from './team-member.entity';
 import { Team } from './team.entity';
+import { SkillVerification } from './skills-verification.entity';
 
 @Entity()
 export class User {
@@ -50,6 +51,12 @@ export class User {
     enum: UserRole,
   })
   role: UserRole;
+
+  @OneToMany(
+    () => SkillVerification,
+    (skillVerification) => skillVerification.user,
+  )
+  skillVerifications: SkillVerification[];
 
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
