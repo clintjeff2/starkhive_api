@@ -41,7 +41,10 @@ export class User {
   @Column()
 
   password: string
+feature/recruiter-edit-job-and-test-fixes
 
+
+main
 
   @ApiProperty({
     description: 'Role of the user',

@@ -24,6 +24,31 @@ import {
 } from './dto/recommendation.dto';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from 'src/auth/entities/user.entity';
+feature/recruiter-edit-job-and-test-fixes
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+
+// Extend Express Request with user property
+interface RequestWithUser extends ExpressRequest {
+  user?: {
+    id: string;
+  };
+}
+
+@ApiTags('jobs')
+@ApiBearerAuth('jwt-auth')
+@Controller('jobs')
+export class JobsController {
+  constructor(private readonly jobsService: JobsService) {}
+
+  @Post()
+  create(@Body() createJobDto: CreateJobDto) {
+    return this.jobsService.createJob(createJobDto);
+  }
+
+  @Get()
+  findAll() {
+    return this.jobsService.findAllJobs();
+
 import { AuthGuardGuard } from '../auth/guards/auth.guard';
 
 @Controller('jobs')
@@ -38,6 +63,7 @@ export class JobsController {
   @UseGuards(AuthGuardGuard)
   createJob(@Body() createJobDto: CreateJobDto, @GetUser() user: User) {
     return this.jobsService.createJob(createJobDto, user.id);
+main
   }
 
   // Get all jobs
@@ -54,9 +80,19 @@ export class JobsController {
 
   // Update a job
   @Patch(':id')
+feature/recruiter-edit-job-and-test-fixes
+  @ApiOperation({ summary: 'Update a job listing (recruiter only)' })
+  @ApiResponse({ status: 200, description: 'Job updated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Only the job owner can update this job.' })
+  @ApiResponse({ status: 404, description: 'Job not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateJob(
+    @Param('id') id: number,
+
   @UseGuards(AuthGuardGuard)
   updateJob(
     @Param('id', ParseIntPipe) id: number,
+main
     @Body() updateJobDto: UpdateJobDto,
     @GetUser() user: User,
   ) {

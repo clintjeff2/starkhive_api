@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext, HttpException } from '@nestjs/common';
+import { Injectable, ExecutionContext, HttpException, Inject } from '@nestjs/common';
 import {
   ThrottlerGuard,
   ThrottlerStorage,
@@ -9,10 +9,11 @@ import { Reflector } from '@nestjs/core';
 @Injectable()
 export class RateLimitGuard extends ThrottlerGuard {
   constructor(
+    @Inject('THROTTLER_OPTIONS') options: any,
     @Inject('THROTTLER_STORAGE') storage: ThrottlerStorage,
-    reflector: Reflector,
+    @Inject(Reflector) reflector: Reflector,
   ) {
-    super(reflector, storage);
+    super(options, storage, reflector);
   }
 
   protected async getTracker(req: Record<string, any>): Promise<string> {

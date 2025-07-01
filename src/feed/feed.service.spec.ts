@@ -6,6 +6,10 @@ import { Post } from '../post/entities/post.entity';
 import { User } from '../auth/entities/user.entity';
 import { SavedPost } from './entities/savedpost.entity';
 import { Repository } from 'typeorm';
+import { Job } from '../jobs/entities/job.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { Comment } from './entities/comment.entity';
+import { Like } from './entities/like.entity';
 
 describe('FeedService', () => {
   let service: FeedService;
@@ -28,6 +32,22 @@ describe('FeedService', () => {
           useValue: {
             findAndCount: jest.fn(),
           },
+        },
+        {
+          provide: getRepositoryToken(Job),
+          useValue: {},
+        },
+        {
+          provide: NotificationsService,
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(Comment),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(Like),
+          useValue: {},
         },
       ],
     }).compile();
