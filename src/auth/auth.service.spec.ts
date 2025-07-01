@@ -11,7 +11,6 @@ import { LogInProvider } from './providers/loginProvider';
 import { TeamService } from './services/team.service';
 import { MailService } from '../mail/mail.service';
 
-
 describe('AuthService', () => {
   let service: AuthService;
 

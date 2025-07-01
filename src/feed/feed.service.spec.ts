@@ -53,7 +53,9 @@ describe('FeedService', () => {
     }).compile();
 
     service = module.get<FeedService>(FeedService);
-    reportRepository = module.get<Repository<Report>>(getRepositoryToken(Report));
+    reportRepository = module.get<Repository<Report>>(
+      getRepositoryToken(Report),
+    );
   });
 
   it('should be defined', () => {
@@ -71,7 +73,10 @@ describe('FeedService', () => {
           reporter: { id: 'user-uuid', email: 'user@example.com' } as User,
         },
       ];
-      (reportRepository.findAndCount as jest.Mock).mockResolvedValue([mockReports, 1]);
+      (reportRepository.findAndCount as jest.Mock).mockResolvedValue([
+        mockReports,
+        1,
+      ]);
 
       const result = await service.getReportedContent(1, 10);
 
