@@ -36,7 +36,6 @@ export class User {
 
   @Column()
   password: string
-  applications: any;
 
   @ApiProperty({
     description: "Role of the user",
@@ -120,4 +119,12 @@ export class User {
   })
   @CreateDateColumn()
   createdAt: Date
+
+  @ApiProperty({
+    description: "Phone number of the user (for SMS notifications)",
+    example: "+1234567890",
+    required: false,
+  })
+  @Column({ unique: true, nullable: true })
+  phone?: string;
 }
