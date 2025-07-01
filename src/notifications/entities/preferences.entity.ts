@@ -17,6 +17,7 @@ class ChannelPreference {
   frequency: NotificationFrequency;
 }
 
+
 @Entity()
 export class Preferences {
   @PrimaryGeneratedColumn()
@@ -38,3 +39,4 @@ export class Preferences {
   @Column(() => ChannelPreference)
   tasks: ChannelPreference;
 }
+
