@@ -77,7 +77,7 @@ describe('NotificationsService', () => {
 
     expect(notificationRepo.create).toHaveBeenCalled();
     expect(notificationRepo.save).toHaveBeenCalled();
-    expect(deliveryRepo.save).toHaveBeenCalledTimes(3); // in-app, email, sms
+    expect(deliveryRepo.save).toHaveBeenCalledTimes(3); 
     expect(mailService.sendEmail).toHaveBeenCalled();
     expect(smsService.sendSms).toHaveBeenCalled();
   });
@@ -98,7 +98,7 @@ describe('NotificationsService', () => {
 
     await service.sendJobStatusNotification(user, 'Test Job', 'approved');
 
-    expect(deliveryRepo.save).toHaveBeenCalledTimes(1); // only email
+    expect(deliveryRepo.save).toHaveBeenCalledTimes(1); 
     expect(mailService.sendEmail).toHaveBeenCalled();
     expect(smsService.sendSms).not.toHaveBeenCalled();
   });
