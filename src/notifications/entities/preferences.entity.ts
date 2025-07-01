@@ -1,11 +1,22 @@
 import { User } from '../../auth/entities/user.entity';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { NotificationChannel } from '../enums/notification-channel.enum';
+import { NotificationFrequency } from '../enums/notification-frequency.enum';
+
+class ChannelPreference {
+  @Column({ default: true })
+  inApp: boolean;
+
+  @Column({ default: false })
+  email: boolean;
+
+  @Column({ default: false })
+  sms: boolean;
+
+  @Column({ type: 'enum', enum: NotificationFrequency, default: NotificationFrequency.IMMEDIATE })
+  frequency: NotificationFrequency;
+}
+
 
 @Entity()
 export class Preferences {
@@ -16,15 +27,16 @@ export class Preferences {
   @JoinColumn()
   user: User;
 
-  @Column({ default: true })
-  application: boolean;
+  @Column(() => ChannelPreference)
+  application: ChannelPreference;
 
-  @Column({ default: true })
-  reviews: boolean;
+  @Column(() => ChannelPreference)
+  reviews: ChannelPreference;
 
-  @Column({ default: true })
-  posts: boolean;
+  @Column(() => ChannelPreference)
+  posts: ChannelPreference;
 
-  @Column({ default: true })
-  tasks: boolean;
+  @Column(() => ChannelPreference)
+  tasks: ChannelPreference;
 }
+

@@ -39,7 +39,9 @@ export class User {
     example: 'hashed_password',
   })
   @Column()
-  password: string;
+
+  password: string
+
 
   @ApiProperty({
     description: 'Role of the user',
@@ -97,9 +99,14 @@ export class User {
     example: '2023-01-01T00:00:00.000Z',
   })
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt: Date
 
-  // Add this only if you have a Notification entity in the future
-  // @OneToMany(() => Notification, (notification) => notification.user)
-  // notifications: Notification[];
+  @ApiProperty({
+    description: "Phone number of the user (for SMS notifications)",
+    example: "+1234567890",
+    required: false,
+  })
+  @Column({ unique: true, nullable: true })
+  phone?: string;
+
 }
