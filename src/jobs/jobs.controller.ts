@@ -9,6 +9,8 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
+  NotFoundException,
+  UnauthorizedException,
   ParseUUIDPipe,
   HttpStatus,
   HttpCode,
@@ -27,6 +29,15 @@ import {
 } from './dto/recommendation.dto';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from 'src/auth/entities/user.entity';
+import { BlockchainService } from './blockchain/blockchain.service';
+import { PaymentRequestDto } from './dto/payment-request.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBody,
+  ApiResponse,
+  ApiParam,
+} from '@nestjs/swagger';
 import { Job } from './entities/job.entity';
 import {
   CreateJobFromTemplateDto,
@@ -50,7 +61,7 @@ interface RequestWithUser extends ExpressRequest {
 export class JobsController {
   constructor(private readonly jobsService: JobsService,
                 private readonly recommendationService: RecommendationService,
-
+       private readonly blockchainService: BlockchainService,
               ) {}
 
   @Post()
@@ -187,6 +198,81 @@ export class JobsController {
     return this.recommendationService.getRecommendationMetrics(user.id);
   }
 
+  // @Get('saved')
+  // async getSavedJobs(@Request() req: RequestWithUser) {
+  //   const userId = req.user?.id || '1'; // Placeholder
+  //   return this.jobsService.getSavedJobs(userId);
+  // }
+
+  // @Get(':id/saved')
+  // async isJobSaved(@Param('id') id: string, @Request() req: RequestWithUser) {
+  //   const userId = req.user?.id || '1'; // Placeholder
+  //   return this.jobsService.isJobSaved(id, userId);
+  // }
+
+  /**
+   * Initiate a payment for a job (Web3 payment)
+   * POST /jobs/:id/pay
+   */
+  @ApiOperation({
+    summary: 'Initiate a payment for a job using Starknet smart contract',
+  })
+  @ApiParam({ name: 'id', description: 'Job ID' })
+  @ApiBody({ type: PaymentRequestDto, description: 'Payment request payload' })
+  @ApiResponse({
+    status: 201,
+    description: 'Transaction hash returned if successful',
+  })
+  @Post(':id/pay')
+  async payForJob(
+    @Param('id') id: string,
+    @Body() paymentDto: PaymentRequestDto,
+    @GetUser() user: User,
+  ) {
+    // You may want to fetch contractAddress and abi from config or DB
+    const { recipient, amount, abi, contractAddress, type } = paymentDto;
+    if (!contractAddress) {
+      throw new NotFoundException('contractAddress is required');
+    }
+    if (!user?.id) {
+      throw new UnauthorizedException('User must be authenticated to make a payment');
+    }
+    // Validate job existence
+    const job = await this.jobsService.findJobById(Number(id));
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    // Example: Only the job owner (recruiter) can pay for the job
+    if (job.recruiterId !== user.id) {
+      throw new UnauthorizedException('You are not authorized to pay for this job');
+    }
+    const from = user.id;
+    // Call blockchain service to make payment
+    return this.blockchainService.makePayment(
+      recipient,
+      amount,
+      abi,
+      contractAddress,
+      from,
+      type,
+    );
+  }
+
+  /**
+   * Check and update the status of a transaction
+   * GET /jobs/tx/:txHash/status
+   */
+  @ApiOperation({
+    summary:
+      'Check and update the status of a blockchain transaction by its hash',
+  })
+  @ApiParam({ name: 'txHash', description: 'Transaction hash' })
+  @ApiResponse({ status: 200, description: 'Current transaction status' })
+  @Get('tx/:txHash/status')
+  async getTransactionStatus(@Param('txHash') txHash: string) {
+    return this.blockchainService.trackTransactionStatus(txHash);
+  }
+}
 
   @Patch('recommendations/:id/action')
   @UseGuards(AuthGuardGuard)
@@ -315,4 +401,3 @@ export class JobsController {
     );
   }
 }
-

@@ -77,9 +77,14 @@ export class JobsService {
     return saved;
   }
 
-  async findAllJobs(includeDeleted = false): Promise<Job[]> {
+  async findAllJobs(includeDeleted: boolean = false): Promise<Job[]> {
     const options: any = { order: { createdAt: 'DESC' } };
+    const query = this.jobRepository
+      .createQueryBuilder('job')
+      .orderBy('job.createdAt', 'DESC');
+
     if (includeDeleted) options.withDeleted = true;
+
     return this.jobRepository.find(options);
   }
 

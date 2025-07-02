@@ -12,6 +12,7 @@ import { Job } from './entities/job.entity';
 import { SavedJob } from './entities/saved-job.entity';
 import { Recommendation } from './entities/recommendation.entity';
 import { ExcludeSoftDeleteInterceptor } from 'src/common/interceptors/exclude-soft-delete.interceptor';
+import { BlockchainService } from './blockchain/blockchain.service';
 import { JobTemplate } from './entities/job-template.entity';
 
 @Module({
@@ -29,6 +30,7 @@ import { JobTemplate } from './entities/job-template.entity';
       provide: APP_INTERCEPTOR,
       useClass: ExcludeSoftDeleteInterceptor,
     },
+    BlockchainService,
   ],
   controllers: [JobsController],
   exports: [JobsService, RecommendationService],
