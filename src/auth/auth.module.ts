@@ -27,6 +27,7 @@ import { Application } from 'src/applications/entities/application.entity';
 import { Job } from 'src/jobs/entities/job.entity';
 import { SkillVerification } from './entities/skills-verification.entity';
 
+
 @Module({
   imports: [
     MailModule,

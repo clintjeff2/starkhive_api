@@ -66,7 +66,6 @@ export class User {
   @OneToMany(() => Application, (application) => application.user)
   applications: Application[];
 
-
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
 
@@ -119,5 +118,4 @@ export class User {
   })
   @Column({ unique: true, nullable: true })
   phone?: string;
-
 }

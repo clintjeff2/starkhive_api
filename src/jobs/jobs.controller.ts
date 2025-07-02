@@ -40,6 +40,7 @@ interface RequestWithUser extends ExpressRequest {
 export class JobsController {
   constructor(private readonly jobsService: JobsService,
                 private readonly recommendationService: RecommendationService,
+
               ) {}
 
   @Post()
@@ -65,13 +66,14 @@ export class JobsController {
 
   @Get(':id/saved')
   async isJobSaved(
-    @Param('id', ParseIntPipe) id: number,
+     @Param('id', ParseIntPipe) id: number,
+    @Body() updateJobDto: UpdateJobDto,
     @GetUser() user: User,
   ) {
-    return this.jobsService.isJobSaved(id, user.id);
+    return this.jobsService.updateJob(id, updateJobDto, user.id);
   }
 
-    @Patch(':id')
+   @Patch(':id')
   @ApiOperation({ summary: 'Update a job listing (recruiter only)' })
   @ApiResponse({ status: 200, description: 'Job updated successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden. Only the job owner can update this job.' })
@@ -86,6 +88,9 @@ export class JobsController {
   ) {
     return this.jobsService.updateJob(id, updateJobDto, user.id);
   }
+
+ 
+ 
 
   @Patch(':id/status')
   @UseGuards(AuthGuardGuard)
@@ -130,7 +135,6 @@ export class JobsController {
 
   @Post(':id/save')
   @UseGuards(AuthGuardGuard)
-  toggleSaveJob(
     @Param('id', ParseIntPipe) id: number,
     @GetUser() user: User,
   ) {
@@ -173,6 +177,7 @@ export class JobsController {
     return this.recommendationService.getRecommendationMetrics(user.id);
   }
 
+
   @Patch('recommendations/:id/action')
   @UseGuards(AuthGuardGuard)
   updateRecommendationAction(
@@ -187,3 +192,4 @@ export class JobsController {
     );
   }
 }
+
