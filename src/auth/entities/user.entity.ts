@@ -17,6 +17,7 @@ import { Like } from '../../feed/entities/like.entity';
 import { EmailToken } from './email-token.entity';
 import { TeamMember } from './team-member.entity';
 import { Team } from './team.entity';
+import { SkillVerification } from './skills-verification.entity';
 
 @Entity()
 export class User {
@@ -37,14 +38,12 @@ export class User {
   @OneToMany(() => Application, (application) => application.user)
   applications: Application[];
 
-
   @ApiProperty({
     description: 'Password for the user',
     example: 'hashed_password',
   })
   @Column()
-  password: string;
-
+  password: string
 
   @ApiProperty({
     description: 'Role of the user',
@@ -57,8 +56,16 @@ export class User {
   })
   role: UserRole;
 
+
+  @OneToMany(
+    () => SkillVerification,
+    (skillVerification) => skillVerification.user,
+  )
+  skillVerifications: SkillVerification[];
+
   @OneToMany(() => Application, (application) => application.user)
   applications: Application[];
+
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
 

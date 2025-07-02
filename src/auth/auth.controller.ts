@@ -12,6 +12,9 @@ import {
   Patch,
   Delete,
   Query,
+  Request,
+  Put,
+
 } from '@nestjs/common';
 import type { AuthService } from './auth.service';
 import type { RegisterDto } from './dto/register-user.dto';
@@ -53,6 +56,12 @@ import { AuthGuard } from '@nestjs/passport';
 import type { LogInDto } from './dto/loginDto';
 import type { LogInProvider } from './providers/loginProvider';
 import { AdminGuard } from './admin.guard';
+
+import {
+  CreateSkillVerificationDto,
+  SkillAssessmentDto,
+  UpdateSkillVerificationDto,
+} from './dto/skills.dto';
 // import { AdminGuard } from './admin.guard';
 
 @ApiTags('auth')
@@ -369,5 +378,51 @@ export class AuthController {
     req,
   ) {
     return this.teamService.getTeamActivities(teamId, req.user.id, query);
+  }
+
+  @Post()
+  async createSkillVerification(
+    @Request() req,
+    @Body() dto: CreateSkillVerificationDto,
+  ) {
+    return await this.authService.createSkillVerification(req.user.id, dto);
+  }
+
+  @Get()
+  async getUserSkillVerifications(@Request() req) {
+    return await this.authService.getUserSkillVerifications(req.user.id);
+  }
+
+  @Get('verified')
+  async getVerifiedSkills(@Request() req) {
+    return await this.authService.getVerifiedSkillsByUser(req.user.id);
+  }
+
+  @Get(':id')
+  async getSkillVerification(@Param('id') id: string, @Request() req) {
+    return await this.authService.getSkillVerificationById(id, req.user.id);
+  }
+
+  @Put(':id')
+  async updateSkillVerification(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() dto: UpdateSkillVerificationDto,
+  ) {
+    return await this.authService.updateSkillVerification(id, req.user.id, dto);
+  }
+
+  @Post('assessment')
+  async submitAssessment(@Body() dto: SkillAssessmentDto) {
+    return await this.authService.submitSkillAssessment(dto);
+  }
+
+  @Post(':id/blockchain-verify')
+  async verifyOnBlockchain(
+    @Param('id') id: string,
+    @Body('txHash') txHash: string,
+  ) {
+    return await this.authService.verifySkillOnBlockchain(id, txHash);
+
   }
 }

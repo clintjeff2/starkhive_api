@@ -39,7 +39,8 @@ interface RequestWithUser extends ExpressRequest {
 @ApiBearerAuth('jwt-auth')
 export class JobsController {
   constructor(private readonly jobsService: JobsService,
-               private readonly recommendationService: RecommendationService,
+                private readonly recommendationService: RecommendationService,
+
               ) {}
 
   @Post()
@@ -47,10 +48,9 @@ export class JobsController {
   createJob(@Body() createJobDto: CreateJobDto, @GetUser() user: User) {
     return this.jobsService.createJob(createJobDto, user.id);
   }
-  
- @Get()
-  findAllJobs() {
 
+  @Get()
+  findAll() {
     return this.jobsService.findAllJobs();
   }
 
@@ -82,8 +82,11 @@ export class JobsController {
   @UseGuards(AuthGuardGuard)
   @Patch(':id')
   async updateJob(
-  findJobById(@Param('id', ParseIntPipe) id: number) {
-    return this.jobsService.findJobById(id);
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateJobDto: UpdateJobDto,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.updateJob(id, updateJobDto, user.id);
   }
 
  
@@ -91,7 +94,6 @@ export class JobsController {
 
   @Patch(':id/status')
   @UseGuards(AuthGuardGuard)
-  updateJobStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateStatusDto: UpdateJobStatusDto,
     @GetUser() user: User,

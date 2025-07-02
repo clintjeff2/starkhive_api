@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UserRole } from './enums/userRole.enum';
 import type { Repository } from 'typeorm';
@@ -26,6 +27,15 @@ import type { LogInDto } from './dto/loginDto';
 import { LogInProvider } from './providers/loginProvider';
 import { TeamService } from './services/team.service';
 import { InjectRepository } from '@nestjs/typeorm';
+import {
+  SkillVerification,
+  VerificationStatus,
+} from './entities/skills-verification.entity';
+import {
+  CreateSkillVerificationDto,
+  SkillAssessmentDto,
+  UpdateSkillVerificationDto,
+} from './dto/skills.dto';
 
 
 @Injectable()
@@ -80,6 +90,8 @@ export class AuthService {
     private readonly loginProvider: LogInProvider,
     private readonly teamService: TeamService,
     private readonly mailService: MailService,
+    @InjectRepository(SkillVerification)
+    private skillVerificationRepository: Repository<SkillVerification>,
   ) {
     this.allowedMimeTypes = this.configService.get<string[]>(
       'portfolio.allowedMimeTypes',
@@ -453,5 +465,179 @@ export class AuthService {
       role: recruiter.role,
       createdAt: recruiter.createdAt,
     };
+  }
+
+  async createSkillVerification(
+    userId: string,
+    dto: CreateSkillVerificationDto,
+  ): Promise<SkillVerification> {
+    const skillVerification = new SkillVerification();
+    skillVerification.user = { id: userId } as any;
+    skillVerification.skillName = dto.skillName;
+    skillVerification.category = dto.category;
+    skillVerification.certificateUrl = dto.certificateUrl;
+    skillVerification.issuingOrganization = dto.issuingOrganization;
+    skillVerification.expiryDate = dto.expiryDate
+      ? new Date(dto.expiryDate)
+      : null;
+    skillVerification.verificationNotes = dto.verificationNotes;
+
+    // Generate certificate hash if URL provided
+    if (dto.certificateUrl) {
+      skillVerification.certificateHash = crypto
+        .createHash('sha256')
+        .update(dto.certificateUrl + userId + Date.now())
+        .digest('hex');
+    }
+
+    return await this.skillVerificationRepository.save(skillVerification);
+  }
+
+  async getUserSkillVerifications(
+    userId: string,
+  ): Promise<SkillVerification[]> {
+    return await this.skillVerificationRepository.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getSkillVerificationById(
+    id: string,
+    userId: string,
+  ): Promise<SkillVerification> {
+    const verification = await this.skillVerificationRepository.findOne({
+      where: { id, user: { id: userId } },
+    });
+
+    if (!verification) {
+      throw new NotFoundException('Skill verification not found');
+    }
+
+    return verification;
+  }
+
+  async updateSkillVerification(
+    id: string,
+    userId: string,
+    dto: UpdateSkillVerificationDto,
+  ): Promise<SkillVerification> {
+    const verification = await this.getSkillVerificationById(id, userId);
+
+    if (verification.status === VerificationStatus.VERIFIED) {
+      throw new ForbiddenException('Cannot update verified skill');
+    }
+
+    Object.assign(verification, dto);
+
+    if (dto.expiryDate) {
+      verification.expiryDate = new Date(dto.expiryDate);
+    }
+
+    // Update certificate hash if URL changed
+    if (dto.certificateUrl) {
+      verification.certificateHash = crypto
+        .createHash('sha256')
+        .update(dto.certificateUrl + userId + Date.now())
+        .digest('hex');
+    }
+
+    return await this.skillVerificationRepository.save(verification);
+  }
+
+  async submitSkillAssessment(
+    dto: SkillAssessmentDto,
+  ): Promise<SkillVerification> {
+    const verification = await this.skillVerificationRepository.findOne({
+      where: { id: dto.skillVerificationId },
+    });
+
+    if (!verification) {
+      throw new NotFoundException('Skill verification not found');
+    }
+
+    verification.assessmentScore = dto.score;
+    verification.assessmentId = dto.assessmentId;
+
+    // Auto-verify if score is above threshold
+    if (dto.score >= 80) {
+      verification.status = VerificationStatus.VERIFIED;
+      verification.credibilityScore =
+        this.calculateCredibilityScore(verification);
+    } else if (dto.score < 60) {
+      verification.status = VerificationStatus.REJECTED;
+    }
+
+    return await this.skillVerificationRepository.save(verification);
+  }
+
+  async verifySkillOnBlockchain(
+    id: string,
+    txHash: string,
+  ): Promise<SkillVerification> {
+    const verification = await this.skillVerificationRepository.findOne({
+      where: { id },
+    });
+
+    if (!verification) {
+      throw new NotFoundException('Skill verification not found');
+    }
+
+    verification.blockchainTxHash = txHash;
+    verification.status = VerificationStatus.VERIFIED;
+    verification.credibilityScore =
+      this.calculateCredibilityScore(verification);
+
+    return await this.skillVerificationRepository.save(verification);
+  }
+
+  async getVerifiedSkillsByUser(userId: string): Promise<SkillVerification[]> {
+    return await this.skillVerificationRepository.find({
+      where: {
+        user: { id: userId },
+        status: VerificationStatus.VERIFIED,
+      },
+      order: { credibilityScore: 'DESC' },
+    });
+  }
+
+  private calculateCredibilityScore(verification: SkillVerification): number {
+    let score = 0;
+
+    // Base score from assessment
+    if (verification.assessmentScore) {
+      score += verification.assessmentScore * 0.4;
+    }
+
+    // Certificate bonus
+    if (verification.certificateUrl) {
+      score += 20;
+    }
+
+    // Blockchain verification bonus
+    if (verification.blockchainTxHash) {
+      score += 30;
+    }
+
+    // Issuing organization bonus
+    if (verification.issuingOrganization) {
+      score += 10;
+    }
+
+    return Math.min(100, Math.round(score));
+  }
+
+  async checkExpiredVerifications(): Promise<void> {
+    const expiredVerifications = await this.skillVerificationRepository.find({
+      where: {
+        status: VerificationStatus.VERIFIED,
+        expiryDate: new Date(),
+      },
+    });
+
+    for (const verification of expiredVerifications) {
+      verification.status = VerificationStatus.EXPIRED;
+      await this.skillVerificationRepository.save(verification);
+    }
   }
 }
