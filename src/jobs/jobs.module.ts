@@ -12,17 +12,14 @@ import { Job } from './entities/job.entity';
 import { SavedJob } from './entities/saved-job.entity';
 import { Recommendation } from './entities/recommendation.entity';
 import { ExcludeSoftDeleteInterceptor } from 'src/common/interceptors/exclude-soft-delete.interceptor';
+import { JobTemplate } from './entities/job-template.entity';
 
 @Module({
   imports: [
     FeedModule,
-    TypeOrmModule.forFeature([
-      Job,
-      Application,
-      SavedJob,
+    TypeOrmModule.forFeature([Job, Application, SavedJob, JobTemplate, SavedJob,
       Recommendation,
-      User,
-    ]),
+      User]),
     AntiSpamModule,
   ],
   providers: [
