@@ -11,6 +11,10 @@ import {
   ParseIntPipe,
   NotFoundException,
   UnauthorizedException,
+  ParseUUIDPipe,
+  HttpStatus,
+  HttpCode,
+  Query,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { RecommendationService } from './recommendation.service';
@@ -34,6 +38,13 @@ import {
   ApiResponse,
   ApiParam,
 } from '@nestjs/swagger';
+import { Job } from './entities/job.entity';
+import {
+  CreateJobFromTemplateDto,
+  CreateTemplateDto,
+  UpdateTemplateDto,
+} from './dto/job-template.dto';
+import { JobTemplate } from './entities/job-template.entity';
 import { AuthGuardGuard } from '../auth/guards/auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
@@ -274,6 +285,119 @@ export class JobsController {
       recommendationId,
       action,
       user.id,
+    );
+  }
+
+  @Post('templates')
+  async createTemplate(
+    @Body() createTemplateDto: CreateTemplateDto,
+    @Request() req,
+  ): Promise<JobTemplate> {
+    // Assuming user info is available in request after authentication
+    const userId =
+      req.user?.id || req.user?.email || createTemplateDto.createdBy;
+    return this.jobsService.createTemplate({
+      ...createTemplateDto,
+      createdBy: userId,
+    });
+  }
+
+  @Get('templates')
+  async findAllTemplates(
+    @Query('category') category?: string,
+    @Query('tags') tags?: string,
+    @Query('includeShared') includeShared?: string,
+    @Request() req?,
+  ): Promise<JobTemplate[]> {
+    const userId = req.user?.id || req.user?.email;
+    const tagsArray = tags
+      ? tags.split(',').map((tag) => tag.trim())
+      : undefined;
+    const includeSharedBool = includeShared !== 'false';
+
+    return this.jobsService.findAllTemplates(
+      userId,
+      category,
+      tagsArray,
+      includeSharedBool,
+    );
+  }
+
+  @Get('templates/categories')
+  async getTemplateCategories(@Request() req): Promise<string[]> {
+    const userId = req.user?.id || req.user?.email;
+    return this.jobsService.getTemplateCategories(userId);
+  }
+
+  @Get('templates/tags')
+  async getTemplateTags(@Request() req): Promise<string[]> {
+    const userId = req.user?.id || req.user?.email;
+    return this.jobsService.getTemplateTags(userId);
+  }
+
+  @Get('templates/stats')
+  async getTemplateStats(@Request() req): Promise<any> {
+    const userId = req.user?.id || req.user?.email;
+    return this.jobsService.getTemplateStats(userId);
+  }
+
+  @Get('templates/:id')
+  async findTemplateById(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req,
+  ): Promise<JobTemplate> {
+    const userId = req.user?.id || req.user?.email;
+    return this.jobsService.findTemplateById(id, userId);
+  }
+
+  @Patch('templates/:id')
+  async updateTemplate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateTemplateDto: UpdateTemplateDto,
+    @Request() req,
+  ): Promise<JobTemplate> {
+    const userId = req.user?.id || req.user?.email;
+    return this.jobsService.updateTemplate(id, updateTemplateDto, userId);
+  }
+
+  @Delete('templates/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteTemplate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req,
+  ): Promise<void> {
+    const userId = req.user?.id || req.user?.email;
+    return this.jobsService.deleteTemplate(id, userId);
+  }
+
+  @Post('templates/:id/share')
+  async shareTemplate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req,
+  ): Promise<JobTemplate> {
+    const userId = req.user?.id || req.user?.email;
+    return this.jobsService.shareTemplate(id, userId);
+  }
+
+  @Post('templates/:id/unshare')
+  async unshareTemplate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req,
+  ): Promise<JobTemplate> {
+    const userId = req.user?.id || req.user?.email;
+    return this.jobsService.unshareTemplate(id, userId);
+  }
+
+  @Post('templates/:id/create-job')
+  async createJobFromTemplate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() createJobFromTemplateDto: CreateJobFromTemplateDto,
+    @Request() req,
+  ): Promise<Job> {
+    const userId = req.user?.id || req.user?.email;
+    return this.jobsService.createJobFromTemplate(
+      { ...createJobFromTemplateDto, templateId: id },
+      userId,
     );
   }
 }
