@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { JobsService } from '../jobs.service';
 import { Job } from '../entities/job.entity';
 import { Application } from 'src/applications/entities/application.entity';
@@ -13,22 +13,58 @@ describe('JobsService', () => {
   let jobRepository: Repository<Job>;
   let savedJobRepository: Repository<SavedJob>;
 
+  const mockUser = {
+    id: 'user-1',
+    email: 'user1@example.com',
+    password: 'pass',
+    role: 'RECRUITER',
+    applications: [],
+    savedPosts: [],
+    likes: [],
+    ownedTeams: [],
+    teamMemberships: [],
+    notifications: {},
+    portfolios: [],
+    posts: [],
+    jobs: [],
+    comments: [],
+    isSuspended: false,
+    isEmailVerified: true,
+    emailTokens: [],
+    createdAt: new Date(),
+  };
+
   const mockJob = {
     id: 1,
     title: 'Test Job',
     description: 'Test Description',
     isFlagged: false,
     status: 'OPEN',
-    ownerId: 1,
+    ownerId: 'user-1',
     recruiterId: 'user-1',
+    recruiter: mockUser,
     createdAt: new Date(),
     updatedAt: new Date(),
+    isAcceptingApplications: true,
+    applications: [],
+    skills: [],
+    budget: 1000,
+    deadline: new Date(),
+    freelancer: undefined,
+    team: undefined,
+    teamId: undefined,
+    requiresApproval: false,
+    isApproved: false,
+    approvedById: undefined,
+    approvedAt: undefined,
+    teamSettings: undefined,
+    deletedAt: undefined,
   };
 
   const mockSavedJob = {
     id: 'saved-1',
     job: mockJob,
-    user: { id: 'user-1' },
+    user: mockUser,
     savedAt: new Date(),
   };
 
@@ -71,6 +107,10 @@ describe('JobsService', () => {
           useValue: {
             analyzeJobPost: jest.fn(),
           },
+        },
+        {
+          provide: DataSource,
+          useValue: {},
         },
       ],
     }).compile();
