@@ -8,7 +8,8 @@ import {
 import type { Repository } from 'typeorm';
 import { Team } from '../entities/team.entity';
 import { TeamMember } from '../entities/team-member.entity';
-import { TeamActivity } from '../entities/team-activity.entity';
+import { TeamActivity, ActivityType,   TeamRole,
+  TeamMemberStatus,} from '../entities/team-activity.entity';
 import { User } from '../entities/user.entity';
 import type {
   CreateTeamDto,
@@ -25,6 +26,7 @@ import { TeamRole } from '../enums/teamRole.enum';
 import { TeamMemberStatus } from '../enums/teamMemberStatus.enum';
 import { ActivityType } from '../enums/activityType.enum';
 import { InjectRepository } from '@nestjs/typeorm';
+
 
 @Injectable()
 export class TeamService {

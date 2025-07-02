@@ -14,6 +14,7 @@ import {
   Query,
   Request,
   Put,
+
 } from '@nestjs/common';
 import type { AuthService } from './auth.service';
 import type { RegisterDto } from './dto/register-user.dto';
@@ -55,6 +56,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { LogInDto } from './dto/loginDto';
 import type { LogInProvider } from './providers/loginProvider';
 import { AdminGuard } from './admin.guard';
+
 import {
   CreateSkillVerificationDto,
   SkillAssessmentDto,
@@ -421,5 +423,6 @@ export class AuthController {
     @Body('txHash') txHash: string,
   ) {
     return await this.authService.verifySkillOnBlockchain(id, txHash);
+
   }
 }
