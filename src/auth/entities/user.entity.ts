@@ -37,9 +37,15 @@ export class User {
   @OneToMany(() => Application, (application) => application.user)
   applications: Application[];
 
-  // @Column()
-  // password: string
-  // applications: any;
+  @ApiProperty({
+    description: 'Password for the user',
+    example: 'hashed_password',
+  })
+  @Column()
+
+  password: string
+feature/recruiter-edit-job-and-test-fixes
+
 
   @ApiProperty({
     description: 'Role of the user',
@@ -51,6 +57,9 @@ export class User {
     enum: UserRole,
   })
   role: UserRole;
+
+  @OneToMany(() => Application, (application) => application.user)
+  applications: Application[];
 
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
@@ -80,6 +89,7 @@ export class User {
 
   @Column({ default: false })
   isSuspended: boolean;
+
   @ApiProperty({
     description: 'Whether the user has verified their email',
     example: false,
@@ -95,5 +105,13 @@ export class User {
     example: '2023-01-01T00:00:00.000Z',
   })
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt: Date
+
+  @ApiProperty({
+    description: "Phone number of the user (for SMS notifications)",
+    example: "+1234567890",
+    required: false,
+  })
+  @Column({ unique: true, nullable: true })
+  phone?: string;
 }

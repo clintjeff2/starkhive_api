@@ -5,6 +5,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { SavedPost } from './entities/savedpost.entity';
 import { Post } from '../post/entities/post.entity';
 import { Report } from './entities/report.entity';
+import { Job } from '../jobs/entities/job.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { Comment } from './entities/comment.entity';
+import { Like } from './entities/like.entity';
 
 describe('FeedController', () => {
   let controller: FeedController;
@@ -24,6 +28,22 @@ describe('FeedController', () => {
         },
         {
           provide: getRepositoryToken(Report),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(Job),
+          useValue: {},
+        },
+        {
+          provide: NotificationsService,
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(Comment),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(Like),
           useValue: {},
         },
       ],

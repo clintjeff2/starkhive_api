@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
+import Handlebars from 'handlebars';
 
 export interface EmailOptions {
   to: string;
   subject: string;
-  html: string;
+  template: string; // template filename
+  context: Record<string, any>; // data for template
   text?: string;
 }
 
@@ -23,7 +27,10 @@ export class MailService {
     const secure = this.configService.get<boolean>('SMTP_SECURE', false);
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASSWORD');
-    const from = this.configService.get<string>('SMTP_FROM', 'noreply@starkhive.com');
+    const from = this.configService.get<string>(
+      'SMTP_FROM',
+      'noreply@starkhive.com',
+    );
 
     this.transporter = nodemailer.createTransport({
       host,
@@ -45,14 +52,22 @@ export class MailService {
     });
   }
 
+  private renderTemplate(templateName: string, context: Record<string, any>): string {
+    const templatePath = path.join(__dirname, '../notifications/templates', templateName);
+    const templateSource = fs.readFileSync(templatePath, 'utf8');
+    const template = Handlebars.compile(templateSource);
+    return template(context);
+  }
+
   async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
+      const html = this.renderTemplate(options.template, options.context);
       const mailOptions: nodemailer.SendMailOptions = {
         from: `"StarkHive" <${this.configService.get<string>('SMTP_FROM', 'noreply@starkhive.com')}>`,
         to: options.to,
         subject: options.subject,
-        text: options.text || options.html.replace(/<[^>]*>/g, ''), // Fallback text content
-        html: options.html,
+        text: options.text || html.replace(/<[^>]*>/g, ''), // Fallback text content
+        html,
       };
 
       const info = await this.transporter.sendMail(mailOptions);
@@ -65,7 +80,10 @@ export class MailService {
   }
 
   // Helper method to send verification email
-  async sendVerificationEmail(email: string, verificationUrl: string): Promise<boolean> {
+  async sendVerificationEmail(
+    email: string,
+    verificationUrl: string,
+  ): Promise<boolean> {
     const subject = 'Verify your email address';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -95,7 +113,9 @@ export class MailService {
     return this.sendEmail({
       to: email,
       subject,
+      template: '', // Not using template for verification
+      context: {},
       html,
-    });
+    } as any);
   }
 }
