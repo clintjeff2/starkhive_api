@@ -17,6 +17,7 @@ import { Like } from '../../feed/entities/like.entity';
 import { EmailToken } from './email-token.entity';
 import { TeamMember } from './team-member.entity';
 import { Team } from './team.entity';
+import { SkillVerification } from './skills-verification.entity';
 
 @Entity()
 export class User {
@@ -42,10 +43,7 @@ export class User {
     example: 'hashed_password',
   })
   @Column()
-
   password: string
-feature/recruiter-edit-job-and-test-fixes
-
 
   @ApiProperty({
     description: 'Role of the user',
@@ -57,6 +55,13 @@ feature/recruiter-edit-job-and-test-fixes
     enum: UserRole,
   })
   role: UserRole;
+
+
+  @OneToMany(
+    () => SkillVerification,
+    (skillVerification) => skillVerification.user,
+  )
+  skillVerifications: SkillVerification[];
 
   @OneToMany(() => Application, (application) => application.user)
   applications: Application[];
@@ -89,7 +94,6 @@ feature/recruiter-edit-job-and-test-fixes
 
   @Column({ default: false })
   isSuspended: boolean;
-
   @ApiProperty({
     description: 'Whether the user has verified their email',
     example: false,

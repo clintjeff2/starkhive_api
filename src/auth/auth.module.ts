@@ -6,7 +6,7 @@ import { User } from './entities/user.entity';
 import { HashingProvider } from './providers/hashingProvider';
 import { BcryptProvider } from './providers/bcrypt';
 import { PasswordReset } from './entities/password-reset.entity';
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { LogInProvider } from './providers/loginProvider';
@@ -22,6 +22,11 @@ import { ApiKey } from './entities/api-key.entity';
 import { ApiKeyService } from './services/api-key.service';
 import { ApiKeyGuard } from './guards/api-key.guard';
 import { ApiKeyController } from './controllers/api-key.controller';
+import { PerformanceService } from './performance.service';
+import { Application } from 'src/applications/entities/application.entity';
+import { Job } from 'src/jobs/entities/job.entity';
+import { SkillVerification } from './entities/skills-verification.entity';
+
 
 @Module({
   imports: [
@@ -33,9 +38,12 @@ import { ApiKeyController } from './controllers/api-key.controller';
       Portfolio,
       EmailToken,
       Team,
+      Job,
       TeamMember,
       TeamActivity,
+      Application,
       ApiKey,
+      SkillVerification,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -57,9 +65,9 @@ import { ApiKeyController } from './controllers/api-key.controller';
   providers: [
     AuthService,
     TeamService,
+    PerformanceService,
     LogInProvider,
     GenerateTokensProvider,
-    JwtService,
     MailService,
     ApiKeyService,
     ApiKeyGuard,
@@ -71,10 +79,10 @@ import { ApiKeyController } from './controllers/api-key.controller';
   exports: [
     AuthService,
     TeamService,
+    PerformanceService,
     TypeOrmModule,
     HashingProvider,
     MailService,
-    JwtService,
     GenerateTokensProvider,
   ],
 })

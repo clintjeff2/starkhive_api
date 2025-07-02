@@ -2,10 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PerformanceMetricsDto } from './dto/performance-metrics.dto';
-import { Application } from '../applications/entities/application.entity';
+import {
+  Application,
+  ApplicationStatus,
+} from '../applications/entities/application.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { User } from './entities/user.entity';
-import { JobStatus } from '../feed/enums/job-status.enum';
 
 @Injectable()
 export class PerformanceService {
@@ -29,7 +31,7 @@ export class PerformanceService {
 
     const totalApplications = applications.length;
     const successfulApplications = applications.filter(
-      (app) => app.status === JobStatus.APPROVED,
+      (app) => app.status === ApplicationStatus.ACCEPTED,
     );
     const applicationSuccessRate =
       totalApplications > 0
@@ -76,7 +78,7 @@ export class PerformanceService {
     // Performance comparison (compare to average application success rate)
     const allApplications = await this.applicationRepo.count();
     const allSuccess = await this.applicationRepo.count({
-      where: { status: JobStatus.APPROVED },
+      where: { status: ApplicationStatus.ACCEPTED },
     });
     const avgSuccessRate =
       allApplications > 0 ? allSuccess / allApplications : 0;

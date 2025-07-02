@@ -22,6 +22,15 @@ export enum JobStatus {
   DRAFT = 'draft',
 }
 
+export enum CompletionStatus {
+  NOT_SUBMITTED = 'not_submitted',
+  PENDING_REVIEW = 'pending_review',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  AUTO_RELEASED = 'auto_released',
+  DISPUTED = 'disputed',
+}
+
 export enum ExperienceLevel {
   ENTRY = 'entry',
   JUNIOR = 'junior',
@@ -118,6 +127,31 @@ export class Job {
 
   @Column({ default: 0 })
   applicationCount: number;
+
+  @Column({
+    type: 'enum',
+    enum: CompletionStatus,
+    default: CompletionStatus.NOT_SUBMITTED,
+  })
+  completionStatus: CompletionStatus;
+
+  @Column({ nullable: true })
+  completionNote: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  completedAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reviewDeadline: Date;
+
+  @Column({ nullable: true })
+  rejectionReason: string;
+
+  @Column({ default: false })
+  paymentReleased: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  paymentReleasedAt: Date;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -44,16 +44,14 @@ interface RequestWithUser extends ExpressRequest {
   };
 }
 
+@Controller('jobs')
 @ApiTags('jobs')
 @ApiBearerAuth('jwt-auth')
-@Controller('jobs')
 export class JobsController {
-  constructor(
-    private readonly jobsService: JobsService,
-    private readonly blockchainService: BlockchainService,
-  ) {}
-    private readonly recommendationService: RecommendationService,
-  ) {}
+  constructor(private readonly jobsService: JobsService,
+                private readonly recommendationService: RecommendationService,
+       private readonly blockchainService: BlockchainService,
+              ) {}
 
   @Post()
   @UseGuards(AuthGuardGuard)
@@ -62,7 +60,7 @@ export class JobsController {
   }
 
   @Get()
-  findAllJobs() {
+  findAll() {
     return this.jobsService.findAllJobs();
   }
 
@@ -72,18 +70,28 @@ export class JobsController {
   }
 
   @Get(':id')
-  findJobById(@Param('id', ParseIntPipe) id: number) {
+  async getById(@Param('id', ParseIntPipe) id: number) {
     return this.jobsService.findJobById(id);
   }
 
-  @Patch(':id')
+  @Get(':id/saved')
+  async isJobSaved(
+     @Param('id', ParseIntPipe) id: number,
+    @Body() updateJobDto: UpdateJobDto,
+    @GetUser() user: User,
+  ) {
+    return this.jobsService.updateJob(id, updateJobDto, user.id);
+  }
+
+   @Patch(':id')
   @ApiOperation({ summary: 'Update a job listing (recruiter only)' })
   @ApiResponse({ status: 200, description: 'Job updated successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden. Only the job owner can update this job.' })
   @ApiResponse({ status: 404, description: 'Job not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @UseGuards(AuthGuardGuard)
-  updateJob(
+  @Patch(':id')
+  async updateJob(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateJobDto: UpdateJobDto,
     @GetUser() user: User,
@@ -91,9 +99,11 @@ export class JobsController {
     return this.jobsService.updateJob(id, updateJobDto, user.id);
   }
 
+ 
+ 
+
   @Patch(':id/status')
   @UseGuards(AuthGuardGuard)
-  updateJobStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateStatusDto: UpdateJobStatusDto,
     @GetUser() user: User,
@@ -135,7 +145,6 @@ export class JobsController {
 
   @Post(':id/save')
   @UseGuards(AuthGuardGuard)
-  toggleSaveJob(
     @Param('id', ParseIntPipe) id: number,
     @GetUser() user: User,
   ) {
@@ -267,4 +276,4 @@ export class JobsController {
       user.id,
     );
   }
-};
+}
