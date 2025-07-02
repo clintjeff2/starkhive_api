@@ -1,19 +1,27 @@
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ChannelPreference } from '../interfaces/channel-preference.interface';
 
 export class CreatePreferencesDto {
   @IsOptional()
-  @IsBoolean()
-  application?: boolean = true;
+  @ValidateNested()
+  @Type(() => Object)
+  application?: ChannelPreference;
 
   @IsOptional()
-  @IsBoolean()
-  reviews?: boolean = true;
+  @ValidateNested()
+  @Type(() => Object)
+  reviews?: ChannelPreference;
 
   @IsOptional()
-  @IsBoolean()
-  posts?: boolean = true;
+  @ValidateNested()
+  @Type(() => Object)
+  posts?: ChannelPreference;
 
   @IsOptional()
-  @IsBoolean()
-  tasks?: boolean = true;
+
+  @ValidateNested()
+  @Type(() => Object)
+  tasks?: ChannelPreference;
 }
+
