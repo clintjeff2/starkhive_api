@@ -15,16 +15,16 @@ import { EmailToken } from './entities/email-token.entity';
 import * as bcrypt from 'bcryptjs';
 import type { RegisterDto } from './dto/register-user.dto';
 import type { CreatePortfolioDto } from './dto/create-portfolio.dto';
-import type { JwtService } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 import { addHours } from 'date-fns';
 import * as crypto from 'crypto';
 import type { PasswordReset } from './entities/password-reset.entity';
 import { PasswordReset } from './entities/password-reset.entity';
-import type { MailService } from '../mail/mail.service';
-import type { ConfigService } from '@nestjs/config';
+import { MailService } from '../mail/mail.service';
+import { ConfigService } from '@nestjs/config';
 import type { LogInDto } from './dto/loginDto';
-import type { LogInProvider } from './providers/loginProvider';
-import type { TeamService } from './services/team.service';
+import { LogInProvider } from './providers/loginProvider';
+import { TeamService } from './services/team.service';
 import { InjectRepository } from '@nestjs/typeorm';
 
 
@@ -64,7 +64,7 @@ export class AuthService {
   // TODO: Move allowedMimeTypes and maxFileSize to configuration
   private allowedMimeTypes: string[];
   private maxFileSize: number;
-  private readonly EMAIL_TOKEN_EXPIRATION_HOURS = 24; // 24 hours
+  private readonly EMAIL_TOKEN_EXPIRATION_HOURS = 24;
 
   constructor(
     @InjectRepository(User)

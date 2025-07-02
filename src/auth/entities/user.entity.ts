@@ -34,17 +34,17 @@ export class User {
   @Column({ unique: true })
   email: string;
 
+  @OneToMany(() => Application, (application) => application.user)
+  applications: Application[];
+
+
   @ApiProperty({
     description: 'Password for the user',
     example: 'hashed_password',
   })
   @Column()
+  password: string;
 
-  password: string
-feature/recruiter-edit-job-and-test-fixes
-
-
-main
 
   @ApiProperty({
     description: 'Role of the user',
@@ -59,7 +59,6 @@ main
 
   @OneToMany(() => Application, (application) => application.user)
   applications: Application[];
-
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
 
@@ -71,6 +70,8 @@ main
 
   @OneToMany(() => TeamMember, (teamMember) => teamMember.user)
   teamMemberships: TeamMember[];
+
+  notifications: any;
 
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolios: Portfolio[];
@@ -86,7 +87,6 @@ main
 
   @Column({ default: false })
   isSuspended: boolean;
-
   @ApiProperty({
     description: 'Whether the user has verified their email',
     example: false,
@@ -111,5 +111,4 @@ main
   })
   @Column({ unique: true, nullable: true })
   phone?: string;
-
 }

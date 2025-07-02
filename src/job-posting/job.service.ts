@@ -6,7 +6,7 @@ import {
 import type { Repository, SelectQueryBuilder } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { Job, JobStatus } from './entities/job.entity';
+import { CompletionStatus, Job, JobStatus } from './entities/job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { JobQueryDto } from './dto/job-query.dto';
@@ -14,9 +14,17 @@ import {
   JobResponseDto,
   PaginatedJobResponseDto,
 } from './dto/job-response.dto';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import {
+  DisputeJobCompletionDto,
+  MarkJobCompletedDto,
+  ReviewJobCompletionDto,
+} from './dto/job-completion.dto';
 
 @Injectable()
 export class JobService {
+  private readonly REVIEW_PERIOD_DAYS = 7;
+
   constructor(
     @InjectRepository(Job)
     private readonly jobRepository: Repository<Job>,
@@ -272,4 +280,174 @@ export class JobService {
       queryBuilder.andWhere('job.skills && :skills', { skills: skillsArray });
     }
   }
+
+  async markJobAsCompleted(
+    jobId: string,
+    dto: MarkJobCompletedDto,
+  ): Promise<Job> {
+    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (job.completionStatus !== CompletionStatus.NOT_SUBMITTED) {
+      throw new BadRequestException('Job has already been marked as completed');
+    }
+
+    const now = new Date();
+    const reviewDeadline = new Date();
+    reviewDeadline.setDate(now.getDate() + this.REVIEW_PERIOD_DAYS);
+
+    await this.jobRepository.update(jobId, {
+      completionStatus: CompletionStatus.PENDING_REVIEW,
+      completionNote: dto.completionNote,
+      completedAt: now,
+      reviewDeadline,
+    });
+
+    const updatedJob = await this.jobRepository.findOne({
+      where: { id: jobId },
+    });
+    if (!updatedJob) {
+      throw new NotFoundException('Job not found after update');
+    }
+    return updatedJob;
+  }
+
+  async reviewJobCompletion(
+    jobId: string,
+    dto: ReviewJobCompletionDto,
+  ): Promise<Job> {
+    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (job.completionStatus !== CompletionStatus.PENDING_REVIEW) {
+      throw new BadRequestException('Job is not pending review');
+    }
+
+    const updateData: Partial<Job> = {
+      completionStatus: dto.completionStatus,
+    };
+
+    if (dto.completionStatus === CompletionStatus.APPROVED) {
+      updateData.paymentReleased = true;
+      updateData.paymentReleasedAt = new Date();
+    } else if (dto.completionStatus === CompletionStatus.REJECTED) {
+      updateData.rejectionReason = dto.rejectionReason;
+      // Reset completion status to allow resubmission
+      updateData.completionStatus = CompletionStatus.NOT_SUBMITTED;
+      updateData.completedAt = undefined;
+      updateData.reviewDeadline = undefined;
+    }
+
+    await this.jobRepository.update(jobId, updateData);
+    const updatedJob = await this.jobRepository.findOne({
+      where: { id: jobId },
+    });
+    if (!updatedJob) {
+      throw new NotFoundException('Job not found after update');
+    }
+    return updatedJob;
+  }
+
+  async disputeJobCompletion(
+    jobId: string,
+    dto: DisputeJobCompletionDto,
+  ): Promise<Job> {
+    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (
+      ![CompletionStatus.REJECTED, CompletionStatus.APPROVED].includes(
+        job.completionStatus,
+      )
+    ) {
+      throw new BadRequestException(
+        'Can only dispute approved or rejected jobs',
+      );
+    }
+
+    await this.jobRepository.update(jobId, {
+      completionStatus: CompletionStatus.DISPUTED,
+      rejectionReason: dto.disputeReason,
+    });
+
+    const updatedJob = await this.jobRepository.findOne({
+      where: { id: jobId },
+    });
+    if (!updatedJob) {
+      throw new NotFoundException('Job not found after update');
+    }
+    return updatedJob;
+  }
+
+  // Auto-release payment after review period expires
+  @Cron(CronExpression.EVERY_HOUR) // Check every hour
+  async autoReleasePayments(): Promise<void> {
+    const now = new Date();
+
+    const jobsToAutoRelease = await this.jobRepository.find({
+      where: {
+        completionStatus: CompletionStatus.PENDING_REVIEW,
+        reviewDeadline: require('typeorm').LessThanOrEqual(now),
+        paymentReleased: false,
+      },
+    });
+
+    if (jobsToAutoRelease.length > 0) {
+      const jobIds = jobsToAutoRelease.map((job) => job.id);
+
+      await this.jobRepository.update(jobIds, {
+        completionStatus: CompletionStatus.AUTO_RELEASED,
+        paymentReleased: true,
+        paymentReleasedAt: now,
+      });
+
+      console.log(`Auto-released payment for ${jobsToAutoRelease.length} jobs`);
+    }
+  }
+
+  async getJobCompletionStatus(jobId: string): Promise<{
+    job: Job;
+    daysUntilAutoRelease?: number;
+  }> {
+    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    let daysUntilAutoRelease: number | undefined;
+
+    if (
+      job.completionStatus === CompletionStatus.PENDING_REVIEW &&
+      job.reviewDeadline
+    ) {
+      const now = new Date();
+      const timeDiff = job.reviewDeadline.getTime() - now.getTime();
+      daysUntilAutoRelease = Math.max(
+        0,
+        Math.ceil(timeDiff / (1000 * 3600 * 24)),
+      );
+    }
+
+    return {
+      job,
+      daysUntilAutoRelease,
+    };
+  }
+
+  // Existing methods would go here...
+  // async create(createJobDto: CreateJobDto): Promise<Job> { ... }
+  // async findAll(): Promise<Job[]> { ... }
+  // async findOne(id: string): Promise<Job> { ... }
+  // async update(id: string, updateJobDto: UpdateJobDto): Promise<Job> { ... }
+  // async remove(id: string): Promise<void> { ... }
 }
