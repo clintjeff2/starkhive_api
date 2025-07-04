@@ -8,8 +8,7 @@ import {
 import type { Repository } from 'typeorm';
 import { Team } from '../entities/team.entity';
 import { TeamMember } from '../entities/team-member.entity';
-import { TeamActivity, ActivityType,   TeamRole,
-  TeamMemberStatus,} from '../entities/team-activity.entity';
+import { TeamActivity, ActivityType } from '../entities/team-activity.entity';
 import { User } from '../entities/user.entity';
 import type {
   CreateTeamDto,
@@ -22,13 +21,9 @@ import type {
   GetTeamsDto,
 } from '../dto/manage-team.dto';
 import { UserRole } from '../enums/userRole.enum';
-import { TeamMember } from '../entities/team-member.entity';
-import { TeamActivity } from '../entities/team-activity.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 import { TeamRole } from '../enums/teamRole.enum';
 import { TeamMemberStatus } from '../enums/teamMemberStatus.enum';
-import { ActivityType } from '../enums/activityType.enum';
-import { InjectRepository } from '@nestjs/typeorm';
-
 
 @Injectable()
 export class TeamService {
@@ -193,7 +188,7 @@ export class TeamService {
 
     // Update team
     Object.assign(team, updateTeamDto);
-    const updatedTeam = await this.teamRepository.save(team);
+    await this.teamRepository.save(team);
 
     // Log activity
     await this.logActivity(
@@ -211,7 +206,7 @@ export class TeamService {
     inviterId: string,
     inviteDto: InviteTeamMemberDto,
   ): Promise<TeamMember> {
-    const team = await this.getTeamById(teamId, inviterId);
+    await this.getTeamById(teamId, inviterId);
 
     // Check permissions
     const inviterMember = await this.getUserTeamMember(teamId, inviterId);
@@ -289,10 +284,13 @@ export class TeamService {
           invitation,
         );
         successful.push(member);
-      } catch (error) {
+      } catch (error: any) {
         failed.push({
           email: invitation.email,
-          error: error.message,
+          error:
+            typeof error === 'object' && error !== null && 'message' in error
+              ? String((error as { message: unknown }).message)
+              : String(error),
         });
       }
     }
@@ -534,7 +532,7 @@ export class TeamService {
     userId: string,
     type: ActivityType,
     description: string,
-    metadata?: any,
+    metadata?: Record<string, unknown>,
   ): Promise<void> {
     try {
       const activity = this.teamActivityRepository.create({
@@ -542,12 +540,17 @@ export class TeamService {
         userId,
         type,
         description,
-        metadata,
+        metadata: metadata as Record<string, unknown>,
       });
       await this.teamActivityRepository.save(activity);
-    } catch (error) {
+    } catch (error: any) {
       // Log error but don't fail the main operation
-      console.error('Failed to log team activity:', error);
+      console.error(
+        'Failed to log team activity:',
+        typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : String(error),
+      );
     }
   }
 }

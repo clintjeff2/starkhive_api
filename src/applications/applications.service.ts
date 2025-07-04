@@ -1,5 +1,13 @@
-import { NotificationsService, NotificationPayload } from '../notifications/notifications.service';
-import { Injectable, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  NotificationsService,
+  NotificationPayload,
+} from '../notifications/notifications.service';
+import {
+  Injectable,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Application } from './entities/application.entity';
@@ -13,7 +21,7 @@ export class ApplicationsService {
     private readonly applicationRepository: Repository<Application>,
     private readonly notificationsService: NotificationsService,
 
-    @InjectRepository(Job) 
+    @InjectRepository(Job)
     private jobRepository: Repository<Job>,
   ) {}
 
@@ -71,12 +79,12 @@ export class ApplicationsService {
       };
       await this.notificationsService.sendNotification(notificationPayload);
     } catch (error) {
-
       // Log error but don't fail the application creation
 
-     
-      console.error(`Failed to send notification for application ${application.id}:`, error);
-
+      console.error(
+        `Failed to send notification for application ${application.id}:`,
+        error,
+      );
     }
 
     return application;
@@ -110,7 +118,6 @@ export class ApplicationsService {
     });
   }
 
-  
   /**
    * Get applications for a freelancer with job relations
    * @param freelancerId The ID of the freelancer
@@ -125,11 +132,11 @@ export class ApplicationsService {
       where: { freelancerId },
       relations: ['job'],
     };
-    
+
     if (ordered) {
       options.order = { createdAt: 'DESC' };
     }
-    
+
     return this.applicationRepository.find(options);
   }
 
@@ -152,5 +159,4 @@ export class ApplicationsService {
 
     return app;
   }
-
 }

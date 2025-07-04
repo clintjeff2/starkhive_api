@@ -32,4 +32,8 @@ export class UpdateJobDto extends PartialType(CreateJobDto) {
   @IsDateString()
   @IsOptional()
   deadline?: string;
+
+  @IsString()
+  @IsOptional()
+  currency?: string;
 }

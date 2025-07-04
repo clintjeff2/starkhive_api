@@ -7,12 +7,14 @@ The job recommendation system provides personalized job recommendations for free
 ## Features
 
 ### Core Functionality
+
 - **Personalized Job Recommendations**: AI-powered scoring based on multiple factors
 - **User Behavior Analysis**: Learning from user interactions (views, applications, saves)
 - **Performance Tracking**: Comprehensive metrics and analytics
 - **Real-time Updates**: Dynamic scoring based on user actions
 
 ### ML Algorithms
+
 - **Skill Matching**: TF-IDF and Jaccard similarity for skill matching
 - **Experience Level Matching**: Distance-based similarity for experience levels
 - **Location Matching**: String similarity and remote work detection
@@ -25,6 +27,7 @@ The job recommendation system provides personalized job recommendations for free
 ### Entities
 
 #### Recommendation Entity
+
 ```typescript
 @Entity('recommendations')
 export class Recommendation {
@@ -60,6 +63,7 @@ export class Recommendation {
 ### Services
 
 #### RecommendationService
+
 Main service handling recommendation generation and management:
 
 - `generateRecommendations()`: Generate personalized recommendations
@@ -74,23 +78,25 @@ The recommendation score is calculated using a weighted combination of factors:
 
 ```typescript
 const weights = {
-  skillMatch: 0.25,      // 25% - Skills alignment
-  experienceMatch: 0.20, // 20% - Experience level match
-  locationMatch: 0.15,   // 15% - Location preferences
-  budgetMatch: 0.15,     // 15% - Budget range match
-  userBehavior: 0.15,    // 15% - Historical behavior
-  jobPopularity: 0.10,   // 10% - Job popularity metrics
+  skillMatch: 0.25, // 25% - Skills alignment
+  experienceMatch: 0.2, // 20% - Experience level match
+  locationMatch: 0.15, // 15% - Location preferences
+  budgetMatch: 0.15, // 15% - Budget range match
+  userBehavior: 0.15, // 15% - Historical behavior
+  jobPopularity: 0.1, // 10% - Job popularity metrics
 };
 ```
 
 ## API Endpoints
 
 ### Get Recommendations
+
 ```http
 GET /jobs/recommendations?limit=20&offset=0&sortBy=score&sortOrder=desc
 ```
 
 **Query Parameters:**
+
 - `limit`: Number of recommendations (default: 20)
 - `offset`: Pagination offset (default: 0)
 - `sortBy`: Sort field - 'score', 'createdAt', 'popularity' (default: 'score')
@@ -98,6 +104,7 @@ GET /jobs/recommendations?limit=20&offset=0&sortBy=score&sortOrder=desc
 - `preferences`: User preferences object with validated budget range
 
 **Example Request Body:**
+
 ```json
 {
   "preferences": {
@@ -114,6 +121,7 @@ GET /jobs/recommendations?limit=20&offset=0&sortBy=score&sortOrder=desc
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -149,11 +157,13 @@ GET /jobs/recommendations?limit=20&offset=0&sortBy=score&sortOrder=desc
 ```
 
 ### Update Recommendation Action
+
 ```http
 PATCH /jobs/recommendations/:id/action
 ```
 
 **Request Body:**
+
 ```json
 {
   "action": "view|apply|save|dismiss",
@@ -162,11 +172,13 @@ PATCH /jobs/recommendations/:id/action
 ```
 
 ### Get Recommendation Metrics
+
 ```http
 GET /jobs/recommendations/metrics
 ```
 
 **Response:**
+
 ```json
 {
   "totalRecommendations": 150,
@@ -191,6 +203,7 @@ GET /jobs/recommendations/metrics
 ## Usage Examples
 
 ### Basic Recommendation Generation
+
 ```typescript
 // Generate recommendations for a user
 const recommendations = await recommendationService.generateRecommendations(
@@ -201,35 +214,38 @@ const recommendations = await recommendationService.generateRecommendations(
       skills: ['javascript', 'react', 'node.js'],
       experienceLevel: 'mid',
       location: 'remote',
-      budgetRange: { 
-        min: 3000, 
-        max: 8000 
+      budgetRange: {
+        min: 3000,
+        max: 8000,
       },
-      jobTypes: ['frontend', 'fullstack']
-    }
-  }
+      jobTypes: ['frontend', 'fullstack'],
+    },
+  },
 );
 ```
 
 ### Track User Interaction
+
 ```typescript
 // Mark recommendation as viewed
-await recommendationService.updateRecommendationAction(
-  'rec-uuid',
-  { action: 'view', value: true }
-);
+await recommendationService.updateRecommendationAction('rec-uuid', {
+  action: 'view',
+  value: true,
+});
 
 // Mark recommendation as applied
-await recommendationService.updateRecommendationAction(
-  'rec-uuid',
-  { action: 'apply', value: true }
-);
+await recommendationService.updateRecommendationAction('rec-uuid', {
+  action: 'apply',
+  value: true,
+});
 ```
 
 ### Get Analytics
+
 ```typescript
 // Get recommendation performance metrics
-const metrics = await recommendationService.getRecommendationMetrics('user-123');
+const metrics =
+  await recommendationService.getRecommendationMetrics('user-123');
 console.log(`CTR: ${metrics.clickThroughRate}`);
 console.log(`Application Rate: ${metrics.applicationRate}`);
 ```
@@ -237,17 +253,21 @@ console.log(`Application Rate: ${metrics.applicationRate}`);
 ## Performance Considerations
 
 ### Database Indexing
+
 The recommendation system uses optimized database indexes:
+
 - `(userId, jobId)` - Unique constraint for user-job pairs
 - `(userId, score)` - For sorting by score
 - `(userId, createdAt)` - For time-based queries
 
 ### Caching Strategy
+
 - Cache user preferences to avoid repeated calculations
 - Cache job popularity metrics with TTL
 - Use Redis for session-based caching
 
 ### Scalability
+
 - Batch processing for recommendation generation
 - Background jobs for score updates
 - Horizontal scaling for high-traffic scenarios
@@ -255,11 +275,13 @@ The recommendation system uses optimized database indexes:
 ## Testing
 
 Run the recommendation service tests:
+
 ```bash
 npm run test src/jobs/tests/recommendation.service.spec.ts
 ```
 
 ### Test Coverage
+
 - Recommendation generation
 - Scoring algorithm accuracy
 - User interaction tracking
@@ -269,18 +291,21 @@ npm run test src/jobs/tests/recommendation.service.spec.ts
 ## Future Enhancements
 
 ### Advanced ML Features
+
 - **Collaborative Filtering**: User-based and item-based recommendations
 - **Content-Based Filtering**: Advanced NLP for job description analysis
 - **Deep Learning**: Neural networks for complex pattern recognition
 - **A/B Testing**: Framework for algorithm comparison
 
 ### Analytics & Insights
+
 - **Real-time Dashboards**: Live recommendation performance
 - **User Segmentation**: Personalized algorithms per user type
 - **Predictive Analytics**: Forecast job market trends
 - **Recommendation Explanations**: Explain why jobs are recommended
 
 ### Integration Features
+
 - **Email Notifications**: Daily/weekly recommendation digests
 - **Push Notifications**: Real-time job alerts
 - **Social Features**: Share recommendations with network
@@ -301,16 +326,19 @@ When contributing to the recommendation system:
 ### Common Issues
 
 **Low Recommendation Scores**
+
 - Check user preference data quality
 - Verify job data completeness
 - Review scoring algorithm weights
 
 **High Memory Usage**
+
 - Implement pagination for large datasets
 - Add database query optimization
 - Consider caching strategies
 
 **Slow Response Times**
+
 - Review database indexes
 - Implement request caching
 - Consider async processing for heavy computations
@@ -318,8 +346,9 @@ When contributing to the recommendation system:
 ### Monitoring
 
 Key metrics to monitor:
+
 - Recommendation generation time
 - User engagement rates (CTR, application rate)
 - Database query performance
 - Memory and CPU usage
-- Error rates and exceptions 
+- Error rates and exceptions

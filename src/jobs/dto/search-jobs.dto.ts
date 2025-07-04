@@ -1,6 +1,19 @@
-import { IsOptional, IsString, IsNumber, IsEnum, IsDateString, Min, Max, ValidateIf } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsEnum,
+  IsDateString,
+  Min,
+  Max,
+  ValidateIf,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { JobType, JobStatus, ExperienceLevel } from '../../job-posting/entities/job.entity';
+import {
+  JobType,
+  JobStatus,
+  ExperienceLevel,
+} from '../../job-posting/entities/job.entity';
 
 export enum JobSortBy {
   DATE = 'date',
@@ -23,7 +36,7 @@ export class SearchJobsDto {
   @IsNumber()
   maxBudget?: number;
 
-  @ValidateIf(o => o.minBudget !== undefined && o.maxBudget !== undefined)
+  @ValidateIf((o) => o.minBudget !== undefined && o.maxBudget !== undefined)
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

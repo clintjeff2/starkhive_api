@@ -23,4 +23,3 @@ export class UpdatePreferencesDto {
   @Type(() => Object)
   tasks?: ChannelPreference;
 }
-

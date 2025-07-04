@@ -1,4 +1,13 @@
-import { Controller, Post, Body, Get, Delete, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Delete,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiKeyService } from '../services/api-key.service';
 import { CreateApiKeyDto } from '../dto/create-api-key.dto';
 import { AdminGuard } from '../admin.guard';
@@ -24,4 +33,4 @@ export class ApiKeyController {
     await this.apiKeyService.revokeKey(id);
     return { success: true };
   }
-} 
+}

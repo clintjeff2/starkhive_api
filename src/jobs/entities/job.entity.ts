@@ -130,17 +130,6 @@ export enum JobType {
   FREELANCE = 'freelance',
 }
 
-export enum JobStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  APPROVED = 'approved',
-  CLOSED = 'closed',
-  DRAFT = 'draft',
-  INPROGRESS = 'in_progress',
-  REJECTED = 'rejected',
-  OPEN = 'open', // Added from your original entity
-}
-
 export enum CompletionStatus {
   NOT_SUBMITTED = 'not_submitted',
   PENDING_REVIEW = 'pending_review',
@@ -329,9 +318,6 @@ export class Job {
   @Column({ default: false })
   isApproved: boolean;
 
-  @Column({ default: false })
-  isRemote: boolean;
-
   @Column({ nullable: true })
   approvedById?: string;
 
@@ -352,4 +338,7 @@ export class Job {
   @Exclude()
   @ExcludeFromQuery()
   deletedAt?: Date;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  currency?: string;
 }

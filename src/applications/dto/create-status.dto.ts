@@ -1,5 +1,3 @@
-
-
 import { IsEnum, IsOptional } from 'class-validator';
 import { ApplicationStatus } from '../entities/application.entity';
 

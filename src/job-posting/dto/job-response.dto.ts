@@ -28,11 +28,11 @@ export class JobResponseDto {
   updatedAt: Date;
 
   constructor(job: Job) {
-    this.id = job.id;
+    this.id = String(job.id);
     this.title = job.title;
     this.description = job.description;
-    this.company = job.company;
-    this.location = job.location;
+    this.company = job.company ?? '';
+    this.location = job.location ?? '';
     this.jobType = job.jobType;
     this.status = job.status;
     this.experienceLevel = job.experienceLevel;

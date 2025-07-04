@@ -1,4 +1,12 @@
-import { IsUUID, IsOptional, IsInt, Min, Max, IsArray, IsString } from 'class-validator';
+import {
+  IsUUID,
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+  IsArray,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetJobRecommendationsDto {

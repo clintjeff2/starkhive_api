@@ -14,13 +14,22 @@ import { Recommendation } from './entities/recommendation.entity';
 import { ExcludeSoftDeleteInterceptor } from 'src/common/interceptors/exclude-soft-delete.interceptor';
 import { BlockchainService } from './blockchain/blockchain.service';
 import { JobTemplate } from './entities/job-template.entity';
+import { CurrencyConversionService } from './services/currency-conversion.service';
+import { Transaction } from './entities/transaction.entity';
 
 @Module({
   imports: [
     FeedModule,
-    TypeOrmModule.forFeature([Job, Application, SavedJob, JobTemplate, SavedJob,
+    TypeOrmModule.forFeature([
+      Job,
+      Application,
+      SavedJob,
+      JobTemplate,
+      SavedJob,
       Recommendation,
-      User]),
+      User,
+      Transaction,
+    ]),
     AntiSpamModule,
   ],
   providers: [
@@ -31,6 +40,7 @@ import { JobTemplate } from './entities/job-template.entity';
       useClass: ExcludeSoftDeleteInterceptor,
     },
     BlockchainService,
+    CurrencyConversionService,
   ],
   controllers: [JobsController],
   exports: [JobsService, RecommendationService],
