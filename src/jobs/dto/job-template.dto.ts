@@ -8,6 +8,7 @@ import {
   IsEmail,
   Length,
 } from 'class-validator';
+import { JobType, ExperienceLevel } from 'src/job-posting/entities/job.entity';
 
 export class CreateTemplateDto {
   @IsString()
@@ -108,7 +109,6 @@ export class CreateTemplateDto {
 
 // src/jobs/dto/update-template.dto.ts
 import { PartialType } from '@nestjs/mapped-types';
-import { ExperienceLevel, JobType } from 'src/job-posting/entities/job.entity';
 
 export class UpdateTemplateDto extends PartialType(CreateTemplateDto) {}
 

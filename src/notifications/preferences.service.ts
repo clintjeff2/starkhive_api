@@ -14,7 +14,6 @@ import { ApplicationStatus } from 'src/applications/entities/application.entity'
 @Injectable()
 export class NotificationService {
   notifyStatusChange(applicationId: string, status: ApplicationStatus) {
-    
     console.log(`Notify: Application ${applicationId} changed to ${status}`);
   }
 }

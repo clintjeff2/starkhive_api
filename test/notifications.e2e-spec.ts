@@ -60,8 +60,18 @@ describe('Notifications E2E', () => {
     // Set preferences for all channels
     const preferences = preferencesRepo.create({
       user,
-      application: { inApp: true, email: true, sms: true, frequency: 'IMMEDIATE' },
-      reviews: { inApp: true, email: false, sms: false, frequency: 'IMMEDIATE' },
+      application: {
+        inApp: true,
+        email: true,
+        sms: true,
+        frequency: 'IMMEDIATE',
+      },
+      reviews: {
+        inApp: true,
+        email: false,
+        sms: false,
+        frequency: 'IMMEDIATE',
+      },
       posts: { inApp: true, email: false, sms: false, frequency: 'IMMEDIATE' },
       tasks: { inApp: true, email: false, sms: false, frequency: 'IMMEDIATE' },
     });
@@ -78,12 +88,16 @@ describe('Notifications E2E', () => {
       .expect(201);
 
     // Check that notifications and deliveries were created
-    const notifications = await notificationRepo.find({ where: { userId: user.id } });
+    const notifications = await notificationRepo.find({
+      where: { userId: user.id },
+    });
     expect(notifications.length).toBeGreaterThan(0);
-    const deliveries = await deliveryRepo.find({ where: { user: { id: user.id } } });
+    const deliveries = await deliveryRepo.find({
+      where: { user: { id: user.id } },
+    });
     expect(deliveries.length).toBeGreaterThanOrEqual(2); // in-app, email, sms
-    expect(deliveries.some(d => d.channel === 'EMAIL')).toBe(true);
-    expect(deliveries.some(d => d.channel === 'SMS')).toBe(true);
-    expect(deliveries.some(d => d.channel === 'IN_APP')).toBe(true);
+    expect(deliveries.some((d) => d.channel === 'EMAIL')).toBe(true);
+    expect(deliveries.some((d) => d.channel === 'SMS')).toBe(true);
+    expect(deliveries.some((d) => d.channel === 'IN_APP')).toBe(true);
   });
-}); 
+});

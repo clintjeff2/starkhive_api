@@ -31,4 +31,12 @@ export class CreateJobDto {
     { message: 'Deadline must be a valid ISO 8601 date string' },
   )
   deadline?: string;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  recruiterId: string;
 }

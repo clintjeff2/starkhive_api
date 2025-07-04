@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification, NotificationType } from './entities/notification.entity';
@@ -64,7 +70,9 @@ export class NotificationsService {
     status: 'approved' | 'rejected',
   ) {
     // 1. Get user preferences
-    const preferences = await this.preferencesRepository.findOne({ where: { user: { id: user.id } } });
+    const preferences = await this.preferencesRepository.findOne({
+      where: { user: { id: user.id } },
+    });
     const pref = preferences?.application;
     const message =
       status === 'approved'
@@ -87,13 +95,15 @@ export class NotificationsService {
     await this.notificationRepository.save(notification);
     // 2. In-app delivery tracking
     if (!pref || pref.inApp) {
-      await this.deliveryRepository.save(this.deliveryRepository.create({
-        notification: { id: notification.id },
-        user: { id: user.id },
-        channel: NotificationChannel.IN_APP,
-        status: NotificationDeliveryStatus.DELIVERED,
-        error: null,
-      }));
+      await this.deliveryRepository.save(
+        this.deliveryRepository.create({
+          notification: { id: notification.id },
+          user: { id: user.id },
+          channel: NotificationChannel.IN_APP,
+          status: NotificationDeliveryStatus.DELIVERED,
+          error: '',
+        }),
+      );
     }
     // 3. Email notification
     if (pref?.email) {
@@ -112,13 +122,15 @@ export class NotificationsService {
         error = e.message;
         this.logger.error(`Email delivery failed: ${e.message}`);
       }
-      await this.deliveryRepository.save(this.deliveryRepository.create({
-        notification: { id: notification.id },
-        user: { id: user.id },
-        channel: NotificationChannel.EMAIL,
-        status: deliveryStatus,
-        error,
-      }));
+      await this.deliveryRepository.save(
+        this.deliveryRepository.create({
+          notification: { id: notification.id },
+          user: { id: user.id },
+          channel: NotificationChannel.EMAIL,
+          status: deliveryStatus,
+          error: error ? error : '',
+        }),
+      );
     }
     // 4. SMS notification
     if (pref?.sms && user.phone) {
@@ -126,7 +138,11 @@ export class NotificationsService {
       let error = null;
       try {
         // Render SMS template
-        const templatePath = path.join(__dirname, 'templates', 'job-status-update-sms.hbs');
+        const templatePath = path.join(
+          __dirname,
+          'templates',
+          'job-status-update-sms.hbs',
+        );
         const templateSource = fs.readFileSync(templatePath, 'utf8');
         const template = Handlebars.compile(templateSource);
         const smsBody = template(context);
@@ -137,13 +153,15 @@ export class NotificationsService {
         error = e.message;
         this.logger.error(`SMS delivery failed: ${e.message}`);
       }
-      await this.deliveryRepository.save(this.deliveryRepository.create({
-        notification: { id: notification.id },
-        user: { id: user.id },
-        channel: NotificationChannel.SMS,
-        status: deliveryStatus,
-        error,
-      }));
+      await this.deliveryRepository.save(
+        this.deliveryRepository.create({
+          notification: { id: notification.id },
+          user: { id: user.id },
+          channel: NotificationChannel.SMS,
+          status: deliveryStatus,
+          error: error ? error : '',
+        }),
+      );
     }
   }
 

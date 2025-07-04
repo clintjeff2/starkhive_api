@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Job } from '../entities/job.entity';
 import { Freelancer } from '../entities/freelancer.entity';
 import { MatchingHistory } from '../entities/matching-history.entity';
-import { MatchingPreferences } from '../entities/matching-preferences.entity';
+// import { MatchingPreferences } from '../entities/matching-preferences.entity';
 import { JobRecommendationResponseDto } from '../dto/job-recommendation.dto';
 
 interface MatchingScore {
@@ -26,7 +26,7 @@ export class MatchingService {
     private jobRepository: Repository<Job>,
     private freelancerRepository: Repository<Freelancer>,
     private matchingHistoryRepository: Repository<MatchingHistory>,
-    private preferencesRepository: Repository<MatchingPreferences>,
+    // private preferencesRepository: Repository<MatchingPreferences>,
   ) {}
 
   async getJobRecommendations(
@@ -52,30 +52,42 @@ export class MatchingService {
 
     // Apply category filters
     if (categories && categories.length > 0) {
-      jobsQuery = jobsQuery.andWhere('job.category IN (:...categories)', { categories });
-    } else if (freelancer.preferences?.preferredCategories?.length > 0) {
-      jobsQuery = jobsQuery.andWhere('job.category IN (:...preferredCategories)', {
-        preferredCategories: freelancer.preferences.preferredCategories,
+      jobsQuery = jobsQuery.andWhere('job.category IN (:...categories)', {
+        categories,
       });
+    } else if (
+      (freelancer.preferences as any)?.preferredCategories?.length > 0
+    ) {
+      jobsQuery = jobsQuery.andWhere(
+        'job.category IN (:...preferredCategories)',
+        {
+          preferredCategories: (freelancer.preferences as any)
+            ?.preferredCategories,
+        },
+      );
     }
 
     // Exclude categories from preferences
-    if (freelancer.preferences?.excludedCategories?.length > 0) {
-      jobsQuery = jobsQuery.andWhere('job.category NOT IN (:...excludedCategories)', {
-        excludedCategories: freelancer.preferences.excludedCategories,
-      });
+    if ((freelancer.preferences as any)?.excludedCategories?.length > 0) {
+      jobsQuery = jobsQuery.andWhere(
+        'job.category NOT IN (:...excludedCategories)',
+        {
+          excludedCategories: (freelancer.preferences as any)
+            ?.excludedCategories,
+        },
+      );
     }
 
     // Apply budget filters
-    if (freelancer.preferences?.minBudget) {
+    if ((freelancer.preferences as any)?.minBudget) {
       jobsQuery = jobsQuery.andWhere('job.budget >= :minBudget', {
-        minBudget: freelancer.preferences.minBudget,
+        minBudget: (freelancer.preferences as any)?.minBudget,
       });
     }
 
-    if (freelancer.preferences?.maxBudget) {
+    if ((freelancer.preferences as any)?.maxBudget) {
       jobsQuery = jobsQuery.andWhere('job.budget <= :maxBudget', {
-        maxBudget: freelancer.preferences.maxBudget,
+        maxBudget: (freelancer.preferences as any)?.maxBudget,
       });
     }
 
@@ -85,7 +97,7 @@ export class MatchingService {
     const jobsWithScores = await Promise.all(
       jobs.map(async (job) => {
         const matchingScore = this.calculateMatchingScore(freelancer, job);
-        
+
         // Store matching history
         await this.storeMatchingHistory(freelancer.id, job.id, matchingScore);
 
@@ -120,7 +132,10 @@ export class MatchingService {
     }));
   }
 
-  private calculateMatchingScore(freelancer: Freelancer, job: Job): MatchingScore {
+  private calculateMatchingScore(
+    freelancer: Freelancer,
+    job: Job,
+  ): MatchingScore {
     const weights = {
       skills: 0.4,
       experience: 0.25,
@@ -129,18 +144,31 @@ export class MatchingService {
       availability: 0.1,
     };
 
-    const skillsScore = this.calculateSkillsScore(freelancer.skills, job.requiredSkills, job.preferredSkills);
-    const experienceScore = this.calculateExperienceScore(freelancer.experienceLevel, job.experienceLevel);
-    const budgetScore = this.calculateBudgetScore(freelancer.hourlyRate, job.budget);
-    const categoryScore = this.calculateCategoryScore(freelancer.categories, job.category);
+    const skillsScore = this.calculateSkillsScore(
+      freelancer.skills,
+      job.requiredSkills,
+      job.preferredSkills,
+    );
+    const experienceScore = this.calculateExperienceScore(
+      freelancer.experienceLevel,
+      job.experienceLevel,
+    );
+    const budgetScore = this.calculateBudgetScore(
+      freelancer.hourlyRate,
+      job.budget,
+    );
+    const categoryScore = this.calculateCategoryScore(
+      freelancer.categories,
+      job.category,
+    );
     const availabilityScore = freelancer.isAvailable ? 100 : 0;
 
     const totalScore = Math.round(
       skillsScore * weights.skills +
-      experienceScore * weights.experience +
-      budgetScore * weights.budget +
-      categoryScore * weights.category +
-      availabilityScore * weights.availability
+        experienceScore * weights.experience +
+        budgetScore * weights.budget +
+        categoryScore * weights.category +
+        availabilityScore * weights.availability,
     );
 
     return {
@@ -162,26 +190,41 @@ export class MatchingService {
   ): number {
     if (!freelancerSkills || freelancerSkills.length === 0) return 0;
 
-    const normalizedFreelancerSkills = freelancerSkills.map(skill => skill.toLowerCase());
-    const normalizedRequiredSkills = requiredSkills.map(skill => skill.toLowerCase());
-    const normalizedPreferredSkills = preferredSkills.map(skill => skill.toLowerCase());
+    const normalizedFreelancerSkills = freelancerSkills.map((skill) =>
+      skill.toLowerCase(),
+    );
+    const normalizedRequiredSkills = requiredSkills.map((skill) =>
+      skill.toLowerCase(),
+    );
+    const normalizedPreferredSkills = preferredSkills.map((skill) =>
+      skill.toLowerCase(),
+    );
 
     // Calculate required skills match (weighted more heavily)
-    const requiredMatches = normalizedRequiredSkills.filter(skill =>
-      normalizedFreelancerSkills.includes(skill)
+    const requiredMatches = normalizedRequiredSkills.filter((skill) =>
+      normalizedFreelancerSkills.includes(skill),
     ).length;
-    const requiredScore = requiredSkills.length > 0 ? (requiredMatches / requiredSkills.length) * 100 : 100;
+    const requiredScore =
+      requiredSkills.length > 0
+        ? (requiredMatches / requiredSkills.length) * 100
+        : 100;
 
     // Calculate preferred skills match (bonus points)
-    const preferredMatches = normalizedPreferredSkills.filter(skill =>
-      normalizedFreelancerSkills.includes(skill)
+    const preferredMatches = normalizedPreferredSkills.filter((skill) =>
+      normalizedFreelancerSkills.includes(skill),
     ).length;
-    const preferredBonus = preferredSkills.length > 0 ? (preferredMatches / preferredSkills.length) * 20 : 0;
+    const preferredBonus =
+      preferredSkills.length > 0
+        ? (preferredMatches / preferredSkills.length) * 20
+        : 0;
 
     return Math.min(100, requiredScore + preferredBonus);
   }
 
-  private calculateExperienceScore(freelancerLevel: string, jobLevel: string): number {
+  private calculateExperienceScore(
+    freelancerLevel: string,
+    jobLevel: string,
+  ): number {
     const experienceLevels = { junior: 1, mid: 2, senior: 3 };
     const freelancerExp = experienceLevels[freelancerLevel.toLowerCase()] || 1;
     const jobExp = experienceLevels[jobLevel.toLowerCase()] || 1;
@@ -192,7 +235,10 @@ export class MatchingService {
     return 40; // Significantly underqualified
   }
 
-  private calculateBudgetScore(freelancerRate: number, jobBudget: number): number {
+  private calculateBudgetScore(
+    freelancerRate: number,
+    jobBudget: number,
+  ): number {
     if (!freelancerRate || !jobBudget) return 50; // Neutral score if no rate info
 
     // Assume job budget is for the entire project, estimate hours
@@ -205,13 +251,20 @@ export class MatchingService {
     return 30;
   }
 
-  private calculateCategoryScore(freelancerCategories: string[], jobCategory: string): number {
+  private calculateCategoryScore(
+    freelancerCategories: string[],
+    jobCategory: string,
+  ): number {
     if (!freelancerCategories || freelancerCategories.length === 0) return 50;
-    
-    const normalizedFreelancerCategories = freelancerCategories.map(cat => cat.toLowerCase());
+
+    const normalizedFreelancerCategories = freelancerCategories.map((cat) =>
+      cat.toLowerCase(),
+    );
     const normalizedJobCategory = jobCategory.toLowerCase();
 
-    return normalizedFreelancerCategories.includes(normalizedJobCategory) ? 100 : 30;
+    return normalizedFreelancerCategories.includes(normalizedJobCategory)
+      ? 100
+      : 30;
   }
 
   private async storeMatchingHistory(

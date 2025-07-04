@@ -7,20 +7,21 @@ import {
 } from '@nestjs/common';
 import { UserRole } from './enums/userRole.enum';
 import type { Repository } from 'typeorm';
-import type { User } from './entities/user.entity';
-import type { Portfolio } from './entities/portfolio.entity';
-import type { EmailToken } from './entities/email-token.entity';
 import { User } from './entities/user.entity';
 import { Portfolio } from './entities/portfolio.entity';
 import { EmailToken } from './entities/email-token.entity';
+import { PasswordReset } from './entities/password-reset.entity';
 import * as bcrypt from 'bcryptjs';
 import type { RegisterDto } from './dto/register-user.dto';
 import type { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { JwtService } from '@nestjs/jwt';
 import { addHours } from 'date-fns';
 import * as crypto from 'crypto';
-import type { PasswordReset } from './entities/password-reset.entity';
-import { PasswordReset } from './entities/password-reset.entity';
+import type {
+  CreateSkillVerificationDto,
+  SkillAssessmentDto,
+  UpdateSkillVerificationDto,
+} from './dto/skills.dto';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
 import type { LogInDto } from './dto/loginDto';
@@ -31,12 +32,6 @@ import {
   SkillVerification,
   VerificationStatus,
 } from './entities/skills-verification.entity';
-import {
-  CreateSkillVerificationDto,
-  SkillAssessmentDto,
-  UpdateSkillVerificationDto,
-} from './dto/skills.dto';
-
 
 @Injectable()
 export class AuthService {
@@ -123,7 +118,8 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
-    const { email, password, role } = registerDto;
+    const { email, role } = registerDto;
+    const password = registerDto.password;
 
     const existing = await this.userRepository.findOne({ where: { email } });
 
@@ -141,7 +137,8 @@ export class AuthService {
     const saved = await this.userRepository.save(user);
     await this.sendVerificationEmail(user.email);
 
-    const { password: _, ...safeUser } = saved;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...safeUser } = saved;
     return safeUser;
   }
 
@@ -267,7 +264,8 @@ export class AuthService {
     await this.mailService.sendEmail({
       to: user.email,
       subject: 'Password Reset Request',
-      html: `Click the link to reset your password: <a href="${resetLink}">Reset Password</a>`, // or 'text' depending on your interface
+      template: 'reset-password',
+      context: { resetLink },
     });
   }
 
@@ -289,7 +287,7 @@ export class AuthService {
   async createPortfolio(
     userId: string,
     dto: CreatePortfolioDto,
-    file: any,
+    file: Express.Multer.File,
   ): Promise<Portfolio> {
     if (!file) throw new BadRequestException('File is required');
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
@@ -316,7 +314,7 @@ export class AuthService {
     userId: string,
     portfolioId: string,
     dto: Partial<CreatePortfolioDto>,
-    file?: any,
+    file?: Express.Multer.File,
   ): Promise<Portfolio> {
     const portfolio = await this.portfolioRepository.findOne({
       where: { id: portfolioId },
@@ -472,7 +470,7 @@ export class AuthService {
     dto: CreateSkillVerificationDto,
   ): Promise<SkillVerification> {
     const skillVerification = new SkillVerification();
-    skillVerification.user = { id: userId } as any;
+    skillVerification.user = { id: userId } as User;
     skillVerification.skillName = dto.skillName;
     skillVerification.category = dto.category;
     skillVerification.certificateUrl = dto.certificateUrl;
@@ -639,5 +637,18 @@ export class AuthService {
       verification.status = VerificationStatus.EXPIRED;
       await this.skillVerificationRepository.save(verification);
     }
+  }
+
+  async getPaymentPreference(userId: string): Promise<string | null> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    return user.preferredCurrency || null;
+  }
+
+  async setPaymentPreference(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    user.preferredCurrency = '';
+    return this.userRepository.save(user);
   }
 }

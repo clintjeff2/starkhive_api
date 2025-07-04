@@ -11,6 +11,37 @@ interface StarknetTxReceipt {
   execution_status?: string;
 }
 
+// ERC20 ABI fragment for balanceOf
+const ERC20_ABI = [
+  {
+    constant: true,
+    inputs: [{ name: '_owner', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: 'balance', type: 'uint256' }],
+    type: 'function',
+  },
+];
+
+// Supported tokens metadata
+const SUPPORTED_TOKENS = {
+  ETH: {
+    symbol: 'ETH',
+    contractAddress: null, // Native ETH, not ERC20
+    decimals: 18,
+  },
+  USDC: {
+    symbol: 'USDC',
+    contractAddress: '0xUSDC_CONTRACT_ADDRESS', // Replace with actual
+    decimals: 6,
+  },
+  STRK: {
+    symbol: 'STRK',
+    contractAddress: '0xSTRK_CONTRACT_ADDRESS', // Replace with actual
+    decimals: 18,
+  },
+  // Add more stablecoins as needed
+};
+
 @Injectable()
 export class BlockchainService {
   private readonly logger = new Logger(BlockchainService.name);
@@ -127,5 +158,30 @@ export class BlockchainService {
       this.logger.error('Error tracking transaction status', error);
       throw error;
     }
+  }
+
+  /**
+   * Get the token balance for a user address
+   * @param address - User's wallet address
+   * @param token - Token symbol (ETH, USDC, STRK, etc.)
+   * @returns balance as a number (in token units)
+   */
+  async getTokenBalance(address: string, token: string): Promise<number> {
+    const tokenMeta = SUPPORTED_TOKENS[token];
+    if (!tokenMeta) throw new Error(`Unsupported token: ${token}`);
+    if (token === 'ETH') {
+      // TODO: Implement actual ETH balance check via Starknet provider
+      // For now, mock a balance
+      return 10; // Mock: 10 ETH
+    }
+    if (!tokenMeta.contractAddress)
+      throw new Error('Token contract address missing');
+    // ERC20 balanceOf
+    const contract = this.getContract(tokenMeta.contractAddress, ERC20_ABI);
+    // TODO: Replace with actual call to Starknet contract
+    // For now, mock a balance
+    // const balance = await contract.call('balanceOf', [address]);
+    // return Number(balance) / (10 ** tokenMeta.decimals);
+    return 1000; // Mock: 1000 units (e.g., USDC, STRK)
   }
 }

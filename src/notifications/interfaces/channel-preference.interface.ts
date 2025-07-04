@@ -5,4 +5,4 @@ export interface ChannelPreference {
   email: boolean;
   sms: boolean;
   frequency: NotificationFrequency;
-} 
+}

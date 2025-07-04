@@ -6,7 +6,12 @@ describe('JobsController', () => {
   let controller: JobsController;
   let service: JobsService;
 
-  const mockUser = { id: 'user-1', email: 'test@example.com', password: 'pass', role: 'RECRUITER' } as any;
+  const mockUser = {
+    id: 'user-1',
+    email: 'test@example.com',
+    password: 'pass',
+    role: 'RECRUITER',
+  } as any;
 
   const mockJobsService = {
     toggleSaveJob: jest.fn(),
@@ -108,20 +113,37 @@ describe('JobsController', () => {
       const expectedJob = { id: jobId, title: 'Updated Title' };
       mockJobsService.updateJob = jest.fn().mockResolvedValue(expectedJob);
 
-      const result = await controller.updateJob(jobId, updateJobDto, user as any);
+      const result = await controller.updateJob(
+        jobId,
+        updateJobDto,
+        user as any,
+      );
       expect(result).toEqual(expectedJob);
-      expect(mockJobsService.updateJob).toHaveBeenCalledWith(jobId, updateJobDto, user.id);
+      expect(mockJobsService.updateJob).toHaveBeenCalledWith(
+        jobId,
+        updateJobDto,
+        user.id,
+      );
     });
 
     it('should throw ForbiddenException if user is not the recruiter', async () => {
       const jobId = 1;
       const updateJobDto = { title: 'Updated Title' };
       const user = { id: 'user-2' };
-      const forbiddenError = { status: 403, message: 'Only the job owner can update this job' };
+      const forbiddenError = {
+        status: 403,
+        message: 'Only the job owner can update this job',
+      };
       mockJobsService.updateJob = jest.fn().mockRejectedValue(forbiddenError);
 
-      await expect(controller.updateJob(jobId, updateJobDto, user as any)).rejects.toEqual(forbiddenError);
-      expect(mockJobsService.updateJob).toHaveBeenCalledWith(jobId, updateJobDto, user.id);
+      await expect(
+        controller.updateJob(jobId, updateJobDto, user as any),
+      ).rejects.toEqual(forbiddenError);
+      expect(mockJobsService.updateJob).toHaveBeenCalledWith(
+        jobId,
+        updateJobDto,
+        user.id,
+      );
     });
   });
 });

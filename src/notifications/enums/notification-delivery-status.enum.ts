@@ -4,4 +4,4 @@ export enum NotificationDeliveryStatus {
   FAILED = 'FAILED',
   DELIVERED = 'DELIVERED',
   READ = 'READ',
-} 
+}

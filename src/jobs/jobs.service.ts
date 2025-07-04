@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Brackets } from 'typeorm';
-import { Job } from './entities/job.entity';
 import { Application } from 'src/applications/entities/application.entity';
 import { SavedJob } from './entities/saved-job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
@@ -21,14 +20,17 @@ import {
   PaginatedJobResponseDto,
 } from 'src/job-posting/dto/job-response.dto';
 import { SearchJobsDto, JobSortBy } from './dto/search-jobs.dto';
-import { JobAdapter } from './adapters/job.adapter';
 import { JobTemplate } from './entities/job-template.entity';
 import {
   CreateJobFromTemplateDto,
   CreateTemplateDto,
   UpdateTemplateDto,
 } from './dto/job-template.dto';
-import { Job, JobStatus, CompletionStatus } from './entities/job.entity';
+import { Job, CompletionStatus, ExperienceLevel } from './entities/job.entity';
+import { BlockchainService } from './blockchain/blockchain.service';
+import { CurrencyConversionService } from './services/currency-conversion.service';
+import { User } from '../auth/entities/user.entity';
+import { JobStatus } from 'src/feed/enums/job-status.enum';
 
 @Injectable()
 export class JobsService {
@@ -42,14 +44,43 @@ export class JobsService {
     @InjectRepository(SavedJob)
     private readonly savedJobRepository: Repository<SavedJob>,
 
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+
     private readonly antiSpamService: AntiSpamService,
-    @Inject(DataSource)
+
     @InjectRepository(JobTemplate)
-    private templateRepository: Repository<JobTemplate>,
+    private readonly templateRepository: Repository<JobTemplate>,
+
+    @Inject(DataSource)
     private readonly dataSource: DataSource,
+
+    private readonly blockchainService: BlockchainService,
+    private readonly currencyConversionService: CurrencyConversionService,
   ) {}
 
   async createJob(createJobDto: CreateJobDto): Promise<Job> {
+    if (
+      createJobDto.currency &&
+      createJobDto.budget &&
+      createJobDto.recruiterId
+    ) {
+      const recruiterRaw = await this.userRepository.findOne({
+        where: { id: createJobDto.recruiterId as string },
+      });
+      if (!recruiterRaw) {
+        throw new BadRequestException('Recruiter wallet address not found.');
+      }
+      const balance = await this.blockchainService.getTokenBalance(
+        recruiterRaw.walletAddress!,
+        createJobDto.currency,
+      );
+      if (balance < createJobDto.budget) {
+        throw new BadRequestException(
+          `Insufficient ${createJobDto.currency} balance to post this job. Required: ${createJobDto.budget}, Available: ${balance}`,
+        );
+      }
+    }
     const job = this.jobRepository.create(createJobDto);
     const saved = await this.jobRepository.save(job);
 
@@ -62,7 +93,7 @@ export class JobsService {
         recruiter: null,
         recruiterId: saved.recruiterId,
         freelancerts: [],
-      } as any;
+      } as unknown as Job;
 
       const isSpam = await this.antiSpamService.analyzeJobPost(jobForAnalysis);
       if (isSpam) {
@@ -77,19 +108,18 @@ export class JobsService {
     return saved;
   }
 
-  async findAllJobs(includeDeleted: boolean = false): Promise<Job[]> {
-    const options: any = { order: { createdAt: 'DESC' } };
-    const query = this.jobRepository
-      .createQueryBuilder('job')
-      .orderBy('job.createdAt', 'DESC');
-
+  async findAllJobs(includeDeleted = false): Promise<Job[]> {
+    const options: { order: { createdAt: 'DESC' }; withDeleted?: boolean } = {
+      order: { createdAt: 'DESC' },
+    };
     if (includeDeleted) options.withDeleted = true;
-
     return this.jobRepository.find(options);
   }
 
   async findJobById(id: number, includeDeleted = false): Promise<Job> {
-    const options: any = { where: { id } };
+    const options: { where: { id: number }; withDeleted?: boolean } = {
+      where: { id },
+    };
     if (includeDeleted) options.withDeleted = true;
     const job = await this.jobRepository.findOne(options);
     if (!job) throw new NotFoundException(`Job with ID ${id} not found`);
@@ -98,17 +128,16 @@ export class JobsService {
 
   async updateJob(id: number, dto: UpdateJobDto, userId: string): Promise<Job> {
     const job = await this.findJobById(id);
-
-    // Check ownership using recruiterId
-    if (job.recruiterId !== userId) {
+    if (String(job.recruiterId) !== String(userId)) {
       throw new ForbiddenException('Only the job owner can update this job');
+    }
     Object.assign(job, dto);
     return this.jobRepository.save(job);
   }
 
   async removeJob(id: number, userId: string): Promise<{ message: string }> {
     const job = await this.findJobById(id);
-    if (job.recruiterId !== userId)
+    if (String(job.recruiterId) !== String(userId))
       throw new ForbiddenException('Only the job owner can delete this job');
     await this.jobRepository.softDelete(id);
     return { message: 'Job deleted successfully' };
@@ -116,9 +145,8 @@ export class JobsService {
 
   async restoreJob(id: number, userId: string): Promise<{ message: string }> {
     const job = await this.findJobById(id, true);
-    if (!job.deletedAt)
-      throw new BadRequestException('Job is not deleted');
-    if (job.recruiterId !== userId)
+    if (!job.deletedAt) throw new BadRequestException('Job is not deleted');
+    if (String(job.recruiterId) !== String(userId))
       throw new ForbiddenException('Only the job owner can restore this job');
     await this.jobRepository.restore(id);
     return { message: 'Job restored successfully' };
@@ -127,7 +155,6 @@ export class JobsService {
   async createApplication(
     createApplicationDto: CreateApplicationDto,
   ): Promise<Application> {
-    // Convert jobId to number if it's a string
     const jobId =
       typeof createApplicationDto.jobId === 'string'
         ? parseInt(createApplicationDto.jobId, 10)
@@ -142,7 +169,6 @@ export class JobsService {
       );
     }
 
-    // Check if job is accepting applications
     if (!job.isAcceptingApplications) {
       throw new ForbiddenException('This job is not accepting applications.');
     }
@@ -150,7 +176,6 @@ export class JobsService {
     const application = this.applicationRepository.create(createApplicationDto);
     const savedApplication = await this.applicationRepository.save(application);
 
-    // Increment application count
     await this.jobRepository.increment({ id: jobId }, 'applicationCount', 1);
 
     return savedApplication;
@@ -158,21 +183,12 @@ export class JobsService {
 
   async findApplicationById(id: number): Promise<Application> {
     const application = await this.applicationRepository.findOne({
-      where: { id: id.toString() },
+      where: { id: String(id) },
     });
     if (!application) {
       throw new NotFoundException(`Application with ID ${id} not found`);
     }
     return application;
-
-  async createApplication(dto: CreateApplicationDto): Promise<Application> {
-    const jobId = typeof dto.jobId === 'string' ? parseInt(dto.jobId, 10) : dto.jobId;
-    const job = await this.jobRepository.findOne({ where: { id: jobId } });
-    if (!job) throw new NotFoundException(`Job with ID ${dto.jobId} not found`);
-    if (!job.isAcceptingApplications)
-      throw new ForbiddenException('This job is not accepting applications.');
-    const app = this.applicationRepository.create(dto);
-    return this.applicationRepository.save(app);
   }
 
   async updateApplication(
@@ -182,12 +198,6 @@ export class JobsService {
     const application = await this.findApplicationById(id);
     Object.assign(application, dto);
     return this.applicationRepository.save(application);
-  }
-
-  async findApplicationById(id: number): Promise<Application> {
-    const app = await this.applicationRepository.findOne({ where: { id } });
-    if (!app) throw new NotFoundException(`Application with ID ${id} not found`);
-    return app;
   }
 
   async removeApplication(id: number): Promise<{ message: string }> {
@@ -204,14 +214,13 @@ export class JobsService {
   ): Promise<Job> {
     const job = await this.findJobById(id);
 
-    // Check ownership using recruiterId
-    if (job.recruiterId !== userId) {
+    if (String(job.recruiterId) !== String(userId)) {
       throw new ForbiddenException(
         'Only the job owner can update the job status',
       );
     }
 
-    job.status = updateStatusDto.status;
+    job.status = dto.status;
     return this.jobRepository.save(job);
   }
 
@@ -222,13 +231,12 @@ export class JobsService {
   ): Promise<Job> {
     const job = await this.findJobById(jobId);
 
-    // Check ownership using recruiterId
-    if (job.recruiterId !== userId) {
+    if (String(job.recruiterId) !== String(userId)) {
       throw new ForbiddenException(
         'Only the job owner can update this setting',
       );
     }
- job.isAcceptingApplications = isAccepting;
+    job.isAcceptingApplications = isAccepting;
     return this.jobRepository.save(job);
   }
 
@@ -270,12 +278,10 @@ export class JobsService {
     return !!saved;
   }
 
-  // Job view tracking
   async incrementViewCount(jobId: number): Promise<void> {
     await this.jobRepository.increment({ id: jobId }, 'viewCount', 1);
   }
 
-  // Paginated job list method
   async getPaginatedJobs(
     page?: number,
     limit?: number,
@@ -293,7 +299,6 @@ export class JobsService {
     const safeLimit = Number(limit) || 10;
     const skip = (safePage - 1) * safeLimit;
 
-    // Valid sort fields for the unified Job entity
     const validSortFields: (keyof Job)[] = [
       'createdAt',
       'title',
@@ -306,40 +311,8 @@ export class JobsService {
       'salaryMax',
     ];
 
-  async getWeeklyNewJobsCount(includeDeleted = false): Promise<{ week: string; count: number }[]> {
-    const query = this.jobRepository
-      .createQueryBuilder('job')
-      .select(`TO_CHAR(DATE_TRUNC('week', job."createdAt"), 'YYYY-MM-DD')`, 'week')
-      .addSelect('COUNT(*)', 'count')
-      .groupBy('1')
-      .orderBy('1', 'DESC');
-    if (!includeDeleted) query.andWhere('job.deletedAt IS NULL');
-    const raw = await query.getRawMany();
-    return raw.map((r) => ({ week: r.week, count: parseInt(r.count, 10) }));
-  }
-
-  async getWeeklyNewApplicationsCount(): Promise<{ week: string; count: number }[]> {
-    const raw = await this.applicationRepository
-      .createQueryBuilder('application')
-      .select(`TO_CHAR(DATE_TRUNC('week', application."createdAt"), 'YYYY-MM-DD')`, 'week')
-      .addSelect('COUNT(*)', 'count')
-      .groupBy('1')
-      .orderBy('1', 'DESC')
-      .getRawMany();
-    return raw.map((r) => ({ week: r.week, count: parseInt(r.count, 10) }));
-  }
-
-
-  async getPaginatedJobs(
-    page = 1,
-    limit = 10,
-    sortBy = 'createdAt',
-  ): Promise<PaginatedJobResponseDto> {
-    const skip = (page - 1) * limit;
-    const validSortFields: (keyof Job)[] = ['createdAt', 'title', 'budget', 'deadline', 'status'];
     const query = this.jobRepository.createQueryBuilder('job');
 
-    // Apply filters
     if (filters) {
       if (filters.status) {
         query.andWhere('job.status = :status', { status: filters.status });
@@ -357,61 +330,37 @@ export class JobsService {
           isRemote: filters.isRemote,
         });
       }
-      if (filters.salaryMin) {
+      if (typeof filters.salaryMin === 'number') {
         query.andWhere('job.salaryMin >= :salaryMin', {
           salaryMin: filters.salaryMin,
         });
       }
-      if (filters.salaryMax) {
+      if (typeof filters.salaryMax === 'number') {
         query.andWhere('job.salaryMax <= :salaryMax', {
           salaryMax: filters.salaryMax,
         });
       }
     }
 
-    // Apply sorting
     if (sortBy && validSortFields.includes(sortBy as keyof Job)) {
-
       query.orderBy(`job.${sortBy}`, 'DESC');
     } else {
       query.orderBy('job.createdAt', 'DESC');
     }
-
 
     const [jobs, total] = await query
       .skip(skip)
       .take(safeLimit)
       .getManyAndCount();
 
-    // Use adapter to convert to expected format if needed
-    const convertedJobs = JobAdapter.toJobPostingEntities(jobs);
-
-    return new PaginatedJobResponseDto(
-      convertedJobs,
-      total,
-      safePage,
-      safeLimit,
-    );
-
+    return new PaginatedJobResponseDto(jobs, total, safePage, safeLimit);
   }
 
   async getSingleJobAsDto(id: number): Promise<JobResponseDto> {
     const job = await this.findJobById(id);
-    const converted = JobAdapter?.toJobPostingEntity
-      ? JobAdapter.toJobPostingEntity(job)
-      : job;
-    return new JobResponseDto(converted);
-  }
-    // Increment view count
-    await this.incrementViewCount(id);
-
-    // Use adapter to convert to expected format
-    const convertedJob = JobAdapter.toJobPostingEntity(job);
-
-    return new JobResponseDto(convertedJob);
+    return new JobResponseDto(job);
   }
 
-  // Template methods remain the same
   async createTemplate(
     createTemplateDto: CreateTemplateDto,
   ): Promise<JobTemplate> {
@@ -502,7 +451,9 @@ export class JobsService {
       .andWhere('template.category IS NOT NULL')
       .getRawMany();
 
-    return result.map((r) => r.category).filter(Boolean);
+    return (result as { category: string }[])
+      .map((r) => r.category)
+      .filter(Boolean);
   }
 
   async getTemplateTags(userId: string): Promise<string[]> {
@@ -523,7 +474,6 @@ export class JobsService {
 
     const template = await this.findTemplateById(templateId, userId);
 
-    // Create job from template with overrides
     const jobData: Partial<Job> = {
       title: overrides.title || template.title,
       description: overrides.description || template.jobDescription,
@@ -541,37 +491,38 @@ export class JobsService {
       contactEmail: overrides.contactEmail || template.contactEmail,
       contactPhone: overrides.contactPhone || template.contactPhone,
       applicationDeadline: overrides.applicationDeadline,
-      isUrgent: overrides.isUrgent || false,
-      isFeatured: overrides.isFeatured || false,
-      status: JobStatus.DRAFT,
+      isUrgent: overrides.isUrgent ?? false,
+      isFeatured: overrides.isFeatured ?? false,
+      status: JobStatus.CLOSED,
       recruiterId: userId,
       ownerId: userId,
-      // Set default values for required fields
       viewCount: 0,
       applicationCount: 0,
       completionStatus: CompletionStatus.NOT_SUBMITTED,
       paymentReleased: false,
       isAcceptingApplications: true,
-      isRemote: template.isRemote || false,
-      // isUrgent: false,
-      // isFeatured: false,
+      isRemote: template.isRemote ?? false,
       isFlagged: false,
     };
 
     const job = this.jobRepository.create(jobData);
     const savedJob = await this.jobRepository.save(job);
 
-    // Update template usage statistics
     await this.updateTemplateUsage(templateId);
 
     return savedJob;
   }
 
   private async updateTemplateUsage(templateId: string): Promise<void> {
-    await this.templateRepository.update(templateId, {
-      useCount: () => 'use_count + 1',
-      lastUsedAt: new Date(),
-    });
+    await this.templateRepository
+      .createQueryBuilder()
+      .update(JobTemplate)
+      .set({
+        useCount: () => '"useCount" + 1',
+        lastUsedAt: new Date(),
+      })
+      .where('id = :templateId', { templateId })
+      .execute();
   }
 
   async shareTemplate(
@@ -603,7 +554,7 @@ export class JobsService {
   }
 
   async getTemplateStats(userId: string): Promise<any> {
-    const stats = await this.templateRepository
+    const stats = (await this.templateRepository
       .createQueryBuilder('template')
       .select([
         'COUNT(*) as total_templates',
@@ -612,7 +563,12 @@ export class JobsService {
         'AVG(template.useCount) as avg_uses_per_template',
       ])
       .where('template.createdBy = :userId', { userId })
-      .getRawOne();
+      .getRawOne()) as {
+      total_templates: number;
+      shared_templates: number;
+      total_uses: number;
+      avg_uses_per_template: number;
+    };
 
     const mostUsedTemplates = await this.templateRepository.find({
       where: { createdBy: userId },
@@ -627,7 +583,6 @@ export class JobsService {
     };
   }
 
-  // Additional utility methods for the unified entity
   async getJobsByStatus(status: JobStatus, userId?: string): Promise<Job[]> {
     const query = this.jobRepository
       .createQueryBuilder('job')
@@ -645,7 +600,7 @@ export class JobsService {
     limit = 10,
   ): Promise<Job[]> {
     return await this.jobRepository.find({
-      where: { experienceLevel: experienceLevel as any },
+      where: { experienceLevel: experienceLevel as ExperienceLevel },
       order: { createdAt: 'DESC' },
       take: limit,
     });
@@ -653,7 +608,7 @@ export class JobsService {
 
   async getFeaturedJobs(limit = 5): Promise<Job[]> {
     return await this.jobRepository.find({
-      where: { isFeatured: true, status: JobStatus.ACTIVE },
+      where: { isFeatured: true, status: JobStatus.OPEN },
       order: { createdAt: 'DESC' },
       take: limit,
     });
@@ -661,15 +616,15 @@ export class JobsService {
 
   async getUrgentJobs(limit = 10): Promise<Job[]> {
     return await this.jobRepository.find({
-      where: { isUrgent: true, status: JobStatus.ACTIVE },
+      where: { isUrgent: true, status: JobStatus.OPEN },
       order: { createdAt: 'DESC' },
       take: limit,
     });
   }
-  /**
-   * Advanced job search with full-text, filtering, sorting, and pagination
-   */
-  async advancedSearchJobs(dto: SearchJobsDto): Promise<PaginatedJobResponseDto> {
+
+  async advancedSearchJobs(
+    dto: SearchJobsDto,
+  ): Promise<PaginatedJobResponseDto> {
     const {
       q,
       minBudget,
@@ -680,7 +635,6 @@ export class JobsService {
       jobType,
       status,
       experienceLevel,
-      skills,
       sortBy = JobSortBy.DATE,
       page = 1,
       limit = 10,
@@ -695,40 +649,57 @@ export class JobsService {
     if (q) {
       query.andWhere(
         new Brackets((qb) => {
-          qb.where('job.title ILIKE :q', { q: `%${q}%` })
-            .orWhere('job.description ILIKE :q', { q: `%${q}%` });
-        })
+          qb.where('job.title ILIKE :q', { q: `%${q}%` }).orWhere(
+            'job.description ILIKE :q',
+            { q: `%${q}%` },
+          );
+        }),
       );
     }
-    if (minBudget !== undefined) {
-      query.andWhere('(job.budget IS NULL OR job.budget >= :minBudget)', { minBudget });
+    if (typeof minBudget === 'number') {
+      query.andWhere('(job.budget IS NULL OR job.budget >= :minBudget)', {
+        minBudget,
+      });
     }
-    if (maxBudget !== undefined) {
-      query.andWhere('(job.budget IS NULL OR job.budget <= :maxBudget)', { maxBudget });
+    if (typeof maxBudget === 'number') {
+      query.andWhere('(job.budget IS NULL OR job.budget <= :maxBudget)', {
+        maxBudget,
+      });
     }
     if (deadlineFrom) {
-      query.andWhere('(job.deadline IS NULL OR job.deadline >= :deadlineFrom)', { deadlineFrom });
+      query.andWhere(
+        '(job.deadline IS NULL OR job.deadline >= :deadlineFrom)',
+        { deadlineFrom },
+      );
     }
     if (deadlineTo) {
-      query.andWhere('(job.deadline IS NULL OR job.deadline <= :deadlineTo)', { deadlineTo });
+      query.andWhere('(job.deadline IS NULL OR job.deadline <= :deadlineTo)', {
+        deadlineTo,
+      });
     }
     if (location) {
-      query.andWhere('job.location ILIKE :location', { location: `%${location}%` });
+      query.andWhere('job.location ILIKE :location', {
+        location: `%${location}%`,
+      });
     }
     if (jobType) {
       query.andWhere('job.jobType = :jobType', { jobType });
     }
     if (experienceLevel) {
-      query.andWhere('job.experienceLevel = :experienceLevel', { experienceLevel });
+      query.andWhere('job.experienceLevel = :experienceLevel', {
+        experienceLevel,
+      });
     }
     // Skills filter omitted unless present in entity
     if (sortBy === JobSortBy.BUDGET) {
       query.orderBy('job.budget', 'DESC');
     } else if (sortBy === JobSortBy.RELEVANCE && q) {
-      query.addSelect(
-        `ts_rank(to_tsvector('english', job.title || ' ' || job.description), plainto_tsquery('english', :q))`,
-        'relevance'
-      ).orderBy('relevance', 'DESC');
+      query
+        .addSelect(
+          `ts_rank(to_tsvector('english', job.title || ' ' || job.description), plainto_tsquery('english', :q))`,
+          'relevance',
+        )
+        .orderBy('relevance', 'DESC');
     } else {
       query.orderBy('job.createdAt', 'DESC');
     }
@@ -736,5 +707,4 @@ export class JobsService {
     const [jobs, total] = await query.getManyAndCount();
     return new PaginatedJobResponseDto(jobs, total, page, limit);
   }
-
 }

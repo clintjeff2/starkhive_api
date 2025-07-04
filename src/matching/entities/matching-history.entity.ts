@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Job } from './job.entity';
 import { Freelancer } from './freelancer.entity';
 
@@ -28,11 +35,11 @@ export class MatchingHistory {
   @Column({ nullable: true })
   action: string; // 'viewed', 'applied', 'ignored'
 
-  @ManyToOne(() => Job, job => job.matchingHistory)
+  @ManyToOne(() => Job, (job) => job.matchingHistory)
   @JoinColumn({ name: 'jobId' })
   job: Job;
 
-  @ManyToOne(() => Freelancer, freelancer => freelancer.matchingHistory)
+  @ManyToOne(() => Freelancer, (freelancer) => freelancer.matchingHistory)
   @JoinColumn({ name: 'freelancerId' })
   freelancer: Freelancer;
 

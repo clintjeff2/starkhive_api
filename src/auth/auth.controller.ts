@@ -14,7 +14,6 @@ import {
   Query,
   Request,
   Put,
-
 } from '@nestjs/common';
 import type { AuthService } from './auth.service';
 import type { RegisterDto } from './dto/register-user.dto';
@@ -62,7 +61,6 @@ import {
   SkillAssessmentDto,
   UpdateSkillVerificationDto,
 } from './dto/skills.dto';
-// import { AdminGuard } from './admin.guard';
 
 @ApiTags('auth')
 @ApiResponse({ status: 400, description: 'Bad Request' })
@@ -423,6 +421,18 @@ export class AuthController {
     @Body('txHash') txHash: string,
   ) {
     return await this.authService.verifySkillOnBlockchain(id, txHash);
+  }
 
+  @Get('users/:id/payment-preference')
+  async getPaymentPreference(@Param('id') userId: string) {
+    const preferredCurrency =
+      await this.authService.getPaymentPreference(userId);
+    return { preferredCurrency };
+  }
+
+  @Put('users/:id/payment-preference')
+  async setPaymentPreference(@Param('id') userId: string) {
+    const user = await this.authService.setPaymentPreference(userId);
+    return { success: true, preferredCurrency: user.preferredCurrency };
   }
 }

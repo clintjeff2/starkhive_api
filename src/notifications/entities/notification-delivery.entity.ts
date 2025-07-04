@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Notification } from './notification.entity';
 import { NotificationChannel } from '../enums/notification-channel.enum';
 import { NotificationDeliveryStatus } from '../enums/notification-delivery-status.enum';
@@ -29,4 +36,4 @@ export class NotificationDelivery {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
 import { MatchingHistory } from './matching-history.entity';
 
 @Entity('jobs')
@@ -36,7 +43,7 @@ export class Job {
   @Column('uuid')
   clientId: string;
 
-  @OneToMany(() => MatchingHistory, history => history.job)
+  @OneToMany(() => MatchingHistory, (history) => history.job)
   matchingHistory: MatchingHistory[];
 
   @CreateDateColumn()

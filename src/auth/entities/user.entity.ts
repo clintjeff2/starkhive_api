@@ -43,7 +43,7 @@ export class User {
     example: 'hashed_password',
   })
   @Column()
-  password: string
+  password: string;
 
   @ApiProperty({
     description: 'Role of the user',
@@ -56,15 +56,11 @@ export class User {
   })
   role: UserRole;
 
-
   @OneToMany(
     () => SkillVerification,
     (skillVerification) => skillVerification.user,
   )
   skillVerifications: SkillVerification[];
-
-  @OneToMany(() => Application, (application) => application.user)
-  applications: Application[];
 
   @OneToMany(() => SavedPost, (savedPost) => savedPost.user)
   savedPosts: SavedPost[];
@@ -109,13 +105,29 @@ export class User {
     example: '2023-01-01T00:00:00.000Z',
   })
   @CreateDateColumn()
-  createdAt: Date
+  createdAt: Date;
 
   @ApiProperty({
-    description: "Phone number of the user (for SMS notifications)",
-    example: "+1234567890",
+    description: 'Phone number of the user (for SMS notifications)',
+    example: '+1234567890',
     required: false,
   })
   @Column({ unique: true, nullable: true })
   phone?: string;
+
+  @ApiProperty({
+    description: 'Preferred payment currency/token (ETH, USDC, STRK, etc.)',
+    example: 'ETH',
+    required: false,
+  })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  preferredCurrency?: string;
+
+  @ApiProperty({
+    description: 'Starknet wallet address of the user',
+    example: '0x1234abcd...',
+    required: false,
+  })
+  @Column({ type: 'varchar', length: 100, nullable: true, unique: true })
+  walletAddress?: string;
 }

@@ -55,3 +55,5 @@ export class TeamActivity {
   @CreateDateColumn()
   createdAt: Date;
 }
+
+export { ActivityType };
