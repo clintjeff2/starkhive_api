@@ -1,9 +1,18 @@
-import { NotificationsService, NotificationPayload } from '../notifications/notifications.service';
-import { Injectable, ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  NotificationsService,
+  NotificationPayload,
+} from '../notifications/notifications.service';
+import {
+  Injectable,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Application } from './entities/application.entity';
 import { Job } from 'src/jobs/entities/job.entity';
+import { UpdateStatusDto } from './dto/update-status.dto';
 
 @Injectable()
 export class ApplicationsService {
@@ -12,7 +21,7 @@ export class ApplicationsService {
     private readonly applicationRepository: Repository<Application>,
     private readonly notificationsService: NotificationsService,
 
-    @InjectRepository(Job) // 👈 This is required!
+    @InjectRepository(Job)
     private jobRepository: Repository<Job>,
   ) {}
 
@@ -27,17 +36,21 @@ export class ApplicationsService {
    * @throws ConflictException if duplicate application exists
    */
   async applyForJob(
-    jobId: string,
+    jobId: number,
     freelancerId: string,
     recruiterId: string,
     coverLetter: string,
   ): Promise<Application> {
     if (!jobId || !freelancerId || !recruiterId || !coverLetter) {
-      throw new ConflictException('All parameters (jobId, freelancerId, recruiterId, coverLetter) are required');
+      throw new ConflictException(
+        'All parameters (jobId, freelancerId, recruiterId, coverLetter) are required',
+      );
     }
 
     // Duplicate check
-    const existing = await this.applicationRepository.findOne({ where: { jobId, freelancerId } });
+    const existing = await this.applicationRepository.findOne({
+      where: { jobId, freelancerId },
+    });
     if (existing) {
       throw new ConflictException('You have already applied to this job.');
     }
@@ -59,7 +72,7 @@ export class ApplicationsService {
       // Send notification to recruiter
       const notificationPayload: NotificationPayload = {
         recruiterId,
-        jobId,
+        jobId: jobId.toString(),
         freelancerId,
         jobLink,
         freelancerProfileLink,
@@ -67,8 +80,11 @@ export class ApplicationsService {
       await this.notificationsService.sendNotification(notificationPayload);
     } catch (error) {
       // Log error but don't fail the application creation
-      // eslint-disable-next-line no-console
-      console.error(`Failed to send notification for application ${application.id}:`, error);
+
+      console.error(
+        `Failed to send notification for application ${application.id}:`,
+        error,
+      );
     }
 
     return application;
@@ -88,17 +104,59 @@ export class ApplicationsService {
       where: { id: jobId },
       relations: ['recruiter'],
     });
-  
+
     if (!job || job.recruiterId) {
-      throw new ForbiddenException('You are not authorized to view these applications.');
+      throw new ForbiddenException(
+        'You are not authorized to view these applications.',
+      );
     }
-  
+
     // Fetch applications with freelancer info
     return this.applicationRepository.find({
       where: { job: { id: jobId } },
       relations: ['freelancer'],
     });
   }
-  
-  
+
+  /**
+   * Get applications for a freelancer with job relations
+   * @param freelancerId The ID of the freelancer
+   * @param ordered Whether to order by creation date descending
+   * @returns List of applications with job details
+   */
+  async getApplicationsWithJobsByFreelancer(
+    freelancerId: string,
+    ordered: boolean = false,
+  ): Promise<Application[]> {
+    const options: any = {
+      where: { freelancerId },
+      relations: ['job'],
+    };
+
+    if (ordered) {
+      options.order = { createdAt: 'DESC' };
+    }
+
+    return this.applicationRepository.find(options);
+  }
+
+  async updateStatus(id: string, dto: UpdateStatusDto): Promise<Application> {
+    const app = await this.applicationRepository.findOneBy({ id });
+    if (!app) throw new NotFoundException('Application not found');
+
+    app.status = dto.status;
+
+    app.statusHistory.push({
+      status: dto.status,
+      updatedAt: new Date(),
+      updatedBy: dto.updatedBy || 'system',
+    });
+
+    await this.applicationRepository.save(app);
+
+    // Trigger notification (pseudo)
+    this.notificationsService?.notifyStatusChange(app.id, dto.status);
+
+    return app;
+  }
 }

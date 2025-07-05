@@ -1,10 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Preferences } from './entities/preferences.entity';
 import { Repository } from 'typeorm';
 import { CreatePreferencesDto } from './dto/create-preferences.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import { User } from '../auth/entities/user.entity';
+import { ApplicationStatus } from 'src/applications/entities/application.entity';
+
+@Injectable()
+export class NotificationService {
+  notifyStatusChange(applicationId: string, status: ApplicationStatus) {
+    console.log(`Notify: Application ${applicationId} changed to ${status}`);
+  }
+}
 
 @Injectable()
 export class PreferencesService {
@@ -14,7 +26,9 @@ export class PreferencesService {
   ) {}
 
   async findByUser(user: User): Promise<Preferences | null> {
-    return this.preferencesRepository.findOne({ where: { user: { id: user.id } } });
+    return this.preferencesRepository.findOne({
+      where: { user: { id: user.id } },
+    });
   }
 
   async create(user: User, dto: CreatePreferencesDto): Promise<Preferences> {

@@ -6,6 +6,10 @@ import { Post } from '../post/entities/post.entity';
 import { User } from '../auth/entities/user.entity';
 import { SavedPost } from './entities/savedpost.entity';
 import { Repository } from 'typeorm';
+import { Job } from '../jobs/entities/job.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { Comment } from './entities/comment.entity';
+import { Like } from './entities/like.entity';
 
 describe('FeedService', () => {
   let service: FeedService;
@@ -29,11 +33,29 @@ describe('FeedService', () => {
             findAndCount: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(Job),
+          useValue: {},
+        },
+        {
+          provide: NotificationsService,
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(Comment),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(Like),
+          useValue: {},
+        },
       ],
     }).compile();
 
     service = module.get<FeedService>(FeedService);
-    reportRepository = module.get<Repository<Report>>(getRepositoryToken(Report));
+    reportRepository = module.get<Repository<Report>>(
+      getRepositoryToken(Report),
+    );
   });
 
   it('should be defined', () => {
@@ -51,7 +73,10 @@ describe('FeedService', () => {
           reporter: { id: 'user-uuid', email: 'user@example.com' } as User,
         },
       ];
-      (reportRepository.findAndCount as jest.Mock).mockResolvedValue([mockReports, 1]);
+      (reportRepository.findAndCount as jest.Mock).mockResolvedValue([
+        mockReports,
+        1,
+      ]);
 
       const result = await service.getReportedContent(1, 10);
 
