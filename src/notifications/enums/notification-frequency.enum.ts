@@ -3,4 +3,4 @@ export enum NotificationFrequency {
   DAILY = 'DAILY',
   WEEKLY = 'WEEKLY',
   NEVER = 'NEVER',
-} 
+}

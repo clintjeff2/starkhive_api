@@ -39,9 +39,18 @@ describe('NotificationsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
-        { provide: getRepositoryToken(Notification), useFactory: mockNotificationRepo },
-        { provide: getRepositoryToken(NotificationDelivery), useFactory: mockDeliveryRepo },
-        { provide: getRepositoryToken(Preferences), useFactory: mockPreferencesRepo },
+        {
+          provide: getRepositoryToken(Notification),
+          useFactory: mockNotificationRepo,
+        },
+        {
+          provide: getRepositoryToken(NotificationDelivery),
+          useFactory: mockDeliveryRepo,
+        },
+        {
+          provide: getRepositoryToken(Preferences),
+          useFactory: mockPreferencesRepo,
+        },
         { provide: MailService, useFactory: mockMailService },
         { provide: SmsService, useFactory: mockSmsService },
       ],
@@ -60,9 +69,18 @@ describe('NotificationsService', () => {
   });
 
   it('should send in-app, email, and SMS notifications based on preferences', async () => {
-    const user = { id: 'user1', email: 'test@example.com', phone: '+1234567890' } as User;
+    const user = {
+      id: 'user1',
+      email: 'test@example.com',
+      phone: '+1234567890',
+    } as User;
     const preferences = {
-      application: { inApp: true, email: true, sms: true, frequency: 'IMMEDIATE' },
+      application: {
+        inApp: true,
+        email: true,
+        sms: true,
+        frequency: 'IMMEDIATE',
+      },
     } as Preferences;
     const notification = { id: 'notif1' } as Notification;
     preferencesRepo.findOne = jest.fn().mockResolvedValue(preferences);
@@ -77,15 +95,24 @@ describe('NotificationsService', () => {
 
     expect(notificationRepo.create).toHaveBeenCalled();
     expect(notificationRepo.save).toHaveBeenCalled();
-    expect(deliveryRepo.save).toHaveBeenCalledTimes(3); 
+    expect(deliveryRepo.save).toHaveBeenCalledTimes(3);
     expect(mailService.sendEmail).toHaveBeenCalled();
     expect(smsService.sendSms).toHaveBeenCalled();
   });
 
   it('should respect preferences and only send enabled channels', async () => {
-    const user = { id: 'user2', email: 'test2@example.com', phone: '+1234567890' } as User;
+    const user = {
+      id: 'user2',
+      email: 'test2@example.com',
+      phone: '+1234567890',
+    } as User;
     const preferences = {
-      application: { inApp: false, email: true, sms: false, frequency: 'IMMEDIATE' },
+      application: {
+        inApp: false,
+        email: true,
+        sms: false,
+        frequency: 'IMMEDIATE',
+      },
     } as Preferences;
     const notification = { id: 'notif2' } as Notification;
     preferencesRepo.findOne = jest.fn().mockResolvedValue(preferences);
@@ -98,8 +125,8 @@ describe('NotificationsService', () => {
 
     await service.sendJobStatusNotification(user, 'Test Job', 'approved');
 
-    expect(deliveryRepo.save).toHaveBeenCalledTimes(1); 
+    expect(deliveryRepo.save).toHaveBeenCalledTimes(1);
     expect(mailService.sendEmail).toHaveBeenCalled();
     expect(smsService.sendSms).not.toHaveBeenCalled();
   });
-}); 
+});

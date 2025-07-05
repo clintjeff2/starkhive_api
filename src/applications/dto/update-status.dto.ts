@@ -1,4 +1,3 @@
-
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApplicationStatus } from '../entities/application.entity';
 
@@ -8,5 +7,5 @@ export class UpdateStatusDto {
 
   @IsOptional()
   @IsString()
-  updatedBy?: string; 
+  updatedBy?: string;
 }

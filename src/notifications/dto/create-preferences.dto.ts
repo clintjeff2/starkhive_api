@@ -19,9 +19,7 @@ export class CreatePreferencesDto {
   posts?: ChannelPreference;
 
   @IsOptional()
-
   @ValidateNested()
   @Type(() => Object)
   tasks?: ChannelPreference;
 }
-

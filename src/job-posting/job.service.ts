@@ -120,7 +120,7 @@ export class JobService {
   }
 
   async findOne(id: string): Promise<JobResponseDto> {
-    const job = await this.jobRepository.findOne({ where: { id } });
+    const job = await this.jobRepository.findOne({ where: { id: Number(id) } });
     if (!job) {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
@@ -131,7 +131,7 @@ export class JobService {
     id: string,
     updateJobDto: UpdateJobDto,
   ): Promise<JobResponseDto> {
-    const job = await this.jobRepository.findOne({ where: { id } });
+    const job = await this.jobRepository.findOne({ where: { id: Number(id) } });
     if (!job) {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
@@ -155,7 +155,9 @@ export class JobService {
     }
 
     await this.jobRepository.update(id, updateJobDto);
-    const updatedJob = await this.jobRepository.findOne({ where: { id } });
+    const updatedJob = await this.jobRepository.findOne({
+      where: { id: Number(id) },
+    });
     if (!updatedJob) {
       throw new NotFoundException(`Updated job with ID ${id} not found`);
     }
@@ -163,7 +165,7 @@ export class JobService {
   }
 
   async remove(id: string): Promise<void> {
-    const job = await this.jobRepository.findOne({ where: { id } });
+    const job = await this.jobRepository.findOne({ where: { id: Number(id) } });
     if (!job) {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
@@ -171,11 +173,15 @@ export class JobService {
   }
 
   async incrementViewCount(id: string): Promise<void> {
-    await this.jobRepository.increment({ id }, 'viewCount', 1);
+    await this.jobRepository.increment({ id: Number(id) }, 'viewCount', 1);
   }
 
   async incrementApplicationCount(id: string): Promise<void> {
-    await this.jobRepository.increment({ id }, 'applicationCount', 1);
+    await this.jobRepository.increment(
+      { id: Number(id) },
+      'applicationCount',
+      1,
+    );
   }
 
   async getJobStats(): Promise<{
@@ -285,7 +291,9 @@ export class JobService {
     jobId: string,
     dto: MarkJobCompletedDto,
   ): Promise<Job> {
-    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+    const job = await this.jobRepository.findOne({
+      where: { id: Number(jobId) },
+    });
 
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -307,7 +315,7 @@ export class JobService {
     });
 
     const updatedJob = await this.jobRepository.findOne({
-      where: { id: jobId },
+      where: { id: Number(jobId) },
     });
     if (!updatedJob) {
       throw new NotFoundException('Job not found after update');
@@ -319,7 +327,9 @@ export class JobService {
     jobId: string,
     dto: ReviewJobCompletionDto,
   ): Promise<Job> {
-    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+    const job = await this.jobRepository.findOne({
+      where: { id: Number(jobId) },
+    });
 
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -346,7 +356,7 @@ export class JobService {
 
     await this.jobRepository.update(jobId, updateData);
     const updatedJob = await this.jobRepository.findOne({
-      where: { id: jobId },
+      where: { id: Number(jobId) },
     });
     if (!updatedJob) {
       throw new NotFoundException('Job not found after update');
@@ -358,7 +368,9 @@ export class JobService {
     jobId: string,
     dto: DisputeJobCompletionDto,
   ): Promise<Job> {
-    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+    const job = await this.jobRepository.findOne({
+      where: { id: Number(jobId) },
+    });
 
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -380,7 +392,7 @@ export class JobService {
     });
 
     const updatedJob = await this.jobRepository.findOne({
-      where: { id: jobId },
+      where: { id: Number(jobId) },
     });
     if (!updatedJob) {
       throw new NotFoundException('Job not found after update');
@@ -418,7 +430,9 @@ export class JobService {
     job: Job;
     daysUntilAutoRelease?: number;
   }> {
-    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+    const job = await this.jobRepository.findOne({
+      where: { id: Number(jobId) },
+    });
 
     if (!job) {
       throw new NotFoundException('Job not found');

@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Freelancer } from './freelancer.entity';
 
 @Entity('matching_preferences')
@@ -30,7 +36,7 @@ export class MatchingPreferences {
   @Column('int', { default: 10 })
   maxRecommendationsPerDay: number;
 
-  @OneToOne(() => Freelancer, freelancer => freelancer.preferences)
+  @OneToOne(() => Freelancer, (freelancer) => freelancer.preferences)
   @JoinColumn({ name: 'freelancerId' })
   freelancer: Freelancer;
 }

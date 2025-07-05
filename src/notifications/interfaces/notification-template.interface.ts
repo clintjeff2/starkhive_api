@@ -6,4 +6,4 @@ export interface NotificationTemplate {
   subject: string;
   body: string;
   data?: NotificationTemplateData;
-} 
+}

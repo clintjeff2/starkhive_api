@@ -1,6 +1,17 @@
-import { Controller, Get, Query, Param, Patch, Body, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  Param,
+  Patch,
+  Body,
+  ValidationPipe,
+} from '@nestjs/common';
 import { MatchingService } from '../services/matching.service';
-import { GetJobRecommendationsDto, JobRecommendationResponseDto } from '../dto/job-recommendation.dto';
+import {
+  GetJobRecommendationsDto,
+  JobRecommendationResponseDto,
+} from '../dto/job-recommendation.dto';
 
 @Controller('matching')
 export class MatchingController {
@@ -26,7 +37,12 @@ export class MatchingController {
 
   @Patch('action')
   async updateMatchingAction(
-    @Body() body: { freelancerId: string; jobId: string; action: 'viewed' | 'applied' | 'ignored' },
+    @Body()
+    body: {
+      freelancerId: string;
+      jobId: string;
+      action: 'viewed' | 'applied' | 'ignored';
+    },
   ): Promise<{ message: string }> {
     await this.matchingService.updateMatchingAction(
       body.freelancerId,

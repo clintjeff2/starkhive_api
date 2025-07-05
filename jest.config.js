@@ -1,9 +1,9 @@
 module.exports = {
   moduleNameMapper: {
-    '^src/(.*)$': '<rootDir>/src/$1'
+    '^src/(.*)$': '<rootDir>/src/$1',
   },
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest'
+    '^.+\\.(t|j)s$': 'ts-jest',
   },
-  testEnvironment: 'node'
-}; 
+  testEnvironment: 'node',
+};

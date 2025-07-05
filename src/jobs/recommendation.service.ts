@@ -1,11 +1,10 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In, Between } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Recommendation } from './entities/recommendation.entity';
 import { Job } from './entities/job.entity';
 import { User } from 'src/auth/entities/user.entity';
@@ -20,9 +19,6 @@ import {
   RecommendationMetricsDto,
   ScoringFactorsDto,
   JobSummaryDto,
-  SkillCountDto,
-  JobTypeCountDto,
-  ScoreRangeCountDto,
 } from './dto/recommendation.dto';
 import { recommendationConfig } from './config/recommendation.config';
 
@@ -52,8 +48,7 @@ export class RecommendationService {
     const { limit = 20, offset = 0, preferences } = options;
 
     // Get user preferences (either from request or stored)
-    const userPreferences =
-      preferences || (await this.getUserPreferences(userId));
+    const userPreferences = preferences || this.getUserPreferences();
 
     // Get available jobs (filtered by user preferences)
     let availableJobs = await this.getAvailableJobs();
@@ -70,7 +65,7 @@ export class RecommendationService {
       }
       // Location filter
       if (userPreferences.location && userPreferences.location.trim() !== '') {
-        const jobLocation = this.extractLocation(job);
+        const jobLocation = this.extractLocation();
         if (
           !jobLocation
             .toLowerCase()
@@ -103,9 +98,9 @@ export class RecommendationService {
       if (
         userPreferences.jobTypes &&
         userPreferences.jobTypes.length > 0 &&
-        (job as any).jobType
+        job.jobType
       ) {
-        if (!userPreferences.jobTypes.includes((job as any).jobType)) {
+        if (!userPreferences.jobTypes.includes(job.jobType)) {
           return false;
         }
       }
@@ -237,10 +232,10 @@ export class RecommendationService {
   /**
    * Calculate skill match score using TF-IDF and cosine similarity
    */
-  private async calculateSkillMatch(
+  private calculateSkillMatch(
     job: Job,
     userPreferences: UserPreferencesDto,
-  ): Promise<number> {
+  ): number {
     if (!userPreferences.skills || userPreferences.skills.length === 0) {
       return 0.5; // Default score if no skills provided
     }
@@ -267,10 +262,10 @@ export class RecommendationService {
   /**
    * Calculate experience level match
    */
-  private async calculateExperienceMatch(
+  private calculateExperienceMatch(
     job: Job,
     userPreferences: UserPreferencesDto,
-  ): Promise<number> {
+  ): number {
     if (!userPreferences.experienceLevel) {
       return 0.5;
     }
@@ -303,15 +298,15 @@ export class RecommendationService {
   /**
    * Calculate location match score
    */
-  private async calculateLocationMatch(
+  private calculateLocationMatch(
     job: Job,
     userPreferences: UserPreferencesDto,
-  ): Promise<number> {
+  ): number {
     if (!userPreferences.location) {
       return 0.5;
     }
 
-    const jobLocation = this.extractLocation(job);
+    const jobLocation = this.extractLocation();
     const userLocation = userPreferences.location.toLowerCase();
 
     // Simple string similarity for now
@@ -336,10 +331,10 @@ export class RecommendationService {
   /**
    * Calculate budget match score
    */
-  private async calculateBudgetMatch(
+  private calculateBudgetMatch(
     job: Job,
     userPreferences: UserPreferencesDto,
-  ): Promise<number> {
+  ): number {
     if (!userPreferences.budgetRange || !job.budget) {
       return 0.5;
     }
@@ -371,7 +366,7 @@ export class RecommendationService {
     const [applicationHistory, savedJobs, viewHistory] = await Promise.all([
       this.getUserApplicationHistory(userId),
       this.getUserSavedJobs(userId),
-      this.getUserViewHistory(userId),
+      this.getUserViewHistory(),
     ]);
 
     let behaviorScore = 0.5; // Base score
@@ -409,7 +404,7 @@ export class RecommendationService {
   private async calculateJobPopularity(job: Job): Promise<number> {
     const [applicationCount, viewCount, saveCount] = await Promise.all([
       this.getJobApplicationCount(job.id),
-      this.getJobViewCount(job.id),
+      this.getJobViewCount(),
       this.getJobSaveCount(job.id),
     ]);
 
@@ -479,23 +474,20 @@ export class RecommendationService {
 
     switch (actionType) {
       case 'view':
-        if (!recommendation.isViewed && value) {
-          recommendation.viewCount += 1;
-        }
         recommendation.isViewed = value;
-        recommendation.viewedAt = value ? now : (null as Date | null);
+        if (value) recommendation.viewedAt = now;
         break;
       case 'apply':
         recommendation.isApplied = value;
-        recommendation.appliedAt = value ? now : (null as Date | null);
+        if (value) recommendation.appliedAt = now;
         break;
       case 'save':
         recommendation.isSaved = value;
-        recommendation.savedAt = value ? now : (null as Date | null);
+        if (value) recommendation.savedAt = now;
         break;
       case 'dismiss':
         recommendation.isDismissed = value;
-        recommendation.dismissedAt = value ? now : (null as Date | null);
+        if (value) recommendation.dismissedAt = now;
         break;
     }
 
@@ -558,9 +550,7 @@ export class RecommendationService {
   }
 
   // Helper methods
-  private async getUserPreferences(
-    userId: string,
-  ): Promise<UserPreferencesDto> {
+  private getUserPreferences(): UserPreferencesDto {
     return {
       skills: [],
       experienceLevel: 'mid',
@@ -640,7 +630,7 @@ export class RecommendationService {
     return 'mid'; // Default
   }
 
-  private extractLocation(job: Job): string {
+  private extractLocation(): string {
     // This would need to be implemented based on your job entity structure
     return '';
   }
@@ -661,7 +651,7 @@ export class RecommendationService {
     });
   }
 
-  private async getUserViewHistory(userId: string): Promise<Job[]> {
+  private getUserViewHistory(): Job[] {
     // This would need to be implemented based on your view tracking
     return [];
   }
@@ -678,7 +668,7 @@ export class RecommendationService {
     return this.applicationRepository.count({ where: { jobId } });
   }
 
-  private async getJobViewCount(jobId: number): Promise<number> {
+  private getJobViewCount(): number {
     // This would need to be implemented based on your view tracking
     return 0;
   }

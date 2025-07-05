@@ -52,8 +52,15 @@ export class MailService {
     });
   }
 
-  private renderTemplate(templateName: string, context: Record<string, any>): string {
-    const templatePath = path.join(__dirname, '../notifications/templates', templateName);
+  private renderTemplate(
+    templateName: string,
+    context: Record<string, any>,
+  ): string {
+    const templatePath = path.join(
+      __dirname,
+      '../notifications/templates',
+      templateName,
+    );
     const templateSource = fs.readFileSync(templatePath, 'utf8');
     const template = Handlebars.compile(templateSource);
     return template(context);

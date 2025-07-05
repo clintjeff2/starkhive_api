@@ -21,13 +21,22 @@ import { JobCleanupTask } from './tasks/job-cleanup.task';
   imports: [ScheduleModule.forRoot()],
   providers: [JobCleanupTask],
 })
+import { CurrencyConversionService } from './services/currency-conversion.service';
+import { Transaction } from './entities/transaction.entity';
 
 @Module({
   imports: [
     FeedModule,
-    TypeOrmModule.forFeature([Job, Application, SavedJob, JobTemplate, SavedJob,
+    TypeOrmModule.forFeature([
+      Job,
+      Application,
+      SavedJob,
+      JobTemplate,
+      SavedJob,
       Recommendation,
-      User]),
+      User,
+      Transaction,
+    ]),
     AntiSpamModule,
   ],
   providers: [
@@ -39,6 +48,7 @@ import { JobCleanupTask } from './tasks/job-cleanup.task';
       useClass: ExcludeSoftDeleteInterceptor,
     },
     BlockchainService,
+    CurrencyConversionService,
   ],
   controllers: [JobsController],
   exports: [JobsService, RecommendationService],

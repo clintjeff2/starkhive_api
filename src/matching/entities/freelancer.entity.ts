@@ -1,6 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
 import { MatchingHistory } from './matching-history.entity';
-import { MatchingPreferences } from './matching-preferences.entity';
+// import { MatchingPreferences } from './matching-preferences.entity';
 
 @Entity('freelancers')
 export class Freelancer {
@@ -34,12 +41,11 @@ export class Freelancer {
   @Column('text', { nullable: true })
   bio: string;
 
-  @OneToMany(() => MatchingHistory, history => history.freelancer)
+  @OneToMany(() => MatchingHistory, (history) => history.freelancer)
   matchingHistory: MatchingHistory[];
 
-  @OneToOne(() => MatchingPreferences, preferences => preferences.freelancer, { cascade: true })
-  @JoinColumn()
-  preferences: MatchingPreferences;
+  @Column('json', { nullable: true })
+  preferences: Record<string, unknown> | null;
 
   @CreateDateColumn()
   createdAt: Date;
