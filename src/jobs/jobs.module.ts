@@ -14,6 +14,13 @@ import { Recommendation } from './entities/recommendation.entity';
 import { ExcludeSoftDeleteInterceptor } from 'src/common/interceptors/exclude-soft-delete.interceptor';
 import { BlockchainService } from './blockchain/blockchain.service';
 import { JobTemplate } from './entities/job-template.entity';
+import { ScheduleModule } from '@nestjs/schedule';
+import { JobCleanupTask } from './tasks/job-cleanup.task';
+
+@Module({
+  imports: [ScheduleModule.forRoot()],
+  providers: [JobCleanupTask],
+})
 import { CurrencyConversionService } from './services/currency-conversion.service';
 import { Transaction } from './entities/transaction.entity';
 
@@ -34,6 +41,7 @@ import { Transaction } from './entities/transaction.entity';
   ],
   providers: [
     JobsService,
+    JobCleanupTask,
     RecommendationService,
     {
       provide: APP_INTERCEPTOR,

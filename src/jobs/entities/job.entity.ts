@@ -341,4 +341,5 @@ export class Job {
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   currency?: string;
+  employer: any;
 }

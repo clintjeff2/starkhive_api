@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Brackets } from 'typeorm';
+import { CompletionStatus, Job, JobStatus } from './entities/job.entity';
 import { Application } from 'src/applications/entities/application.entity';
 import { SavedJob } from './entities/saved-job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
@@ -34,6 +35,9 @@ import { JobStatus } from 'src/feed/enums/job-status.enum';
 
 @Injectable()
 export class JobsService {
+  logger: any;
+  mailerService: any;
+  
   constructor(
     @InjectRepository(Job)
     private readonly jobRepository: Repository<Job>,
@@ -191,6 +195,16 @@ export class JobsService {
     return application;
   }
 
+  async createApplication(dto: CreateApplicationDto): Promise<Application> {
+    const jobId = typeof dto.jobId === 'string' ? parseInt(dto.jobId, 10) : dto.jobId;
+    const job = await this.jobRepository.findOne({ where: { id: jobId } });
+    if (!job) throw new NotFoundException(`Job with ID ${dto.jobId} not found`);
+    if (!job.isAcceptingApplications)
+      throw new ForbiddenException('This job is not accepting applications.');
+    const app = this.applicationRepository.create(dto);
+    return this.applicationRepository.save(app);
+  }
+
   async updateApplication(
     id: number,
     dto: UpdateApplicationDto,
@@ -283,9 +297,9 @@ export class JobsService {
   }
 
   async getPaginatedJobs(
-    page?: number,
-    limit?: number,
-    sortBy?: string,
+    page = 1,
+    limit = 10,
+    sortBy: keyof Job = 'createdAt',
     filters?: {
       status?: JobStatus;
       jobType?: string;
@@ -358,9 +372,14 @@ export class JobsService {
 
   async getSingleJobAsDto(id: number): Promise<JobResponseDto> {
     const job = await this.findJobById(id);
-    return new JobResponseDto(job);
+    await this.incrementViewCount(id);
+    const convertedJob = JobAdapter?.toJobPostingEntity
+      ? JobAdapter.toJobPostingEntity(job)
+      : job;
+    return new JobResponseDto(convertedJob);
   }
 
+  // Template methods remain the same
   async createTemplate(
     createTemplateDto: CreateTemplateDto,
   ): Promise<JobTemplate> {
@@ -706,5 +725,163 @@ export class JobsService {
     query.skip(skip).take(limit);
     const [jobs, total] = await query.getManyAndCount();
     return new PaginatedJobResponseDto(jobs, total, page, limit);
+  }
+
+
+    async findExpiredJobs(): Promise<Job[]> {
+    const now = new Date();
+    return this.jobRepository.find({
+      where: {
+        deadline: { $lt: now },
+        status: 'active',
+      },
+      relations: ['employer'],
+    });
+  }
+
+  async findJobsExpiringIn(days: number): Promise<Job[]> {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + days);
+    const now = new Date();
+    
+    return this.jobRepository.find({
+      where: {
+        deadline: { $gte: now, $lte: futureDate },
+        status: 'active',
+      },
+      relations: ['employer'],
+    });
+  }
+
+  async expireJob(jobId: string): Promise<Job> {
+    const job = await this.jobRepository.findOne({
+      where: { id: jobId },
+      relations: ['employer'],
+    });
+
+    if (!job) {
+      throw new Error('Job not found');
+    }
+
+    job.status = 'expired';
+    job.expiredAt = new Date();
+    return this.jobRepository.save(job);
+  }
+
+  async archiveJob(jobId: string): Promise<Job> {
+    const job = await this.jobRepository.findOne({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new Error('Job not found');
+    }
+
+    job.status = 'archived';
+    job.archivedAt = new Date();
+    return this.jobRepository.save(job);
+  }
+
+  async extendJob(jobId: string, extendJobDto: ExtendJobDto): Promise<Job> {
+    const job = await this.jobRepository.findOne({
+      where: { id: jobId },
+      relations: ['employer'],
+    });
+
+    if (!job) {
+      throw new Error('Job not found');
+    }
+
+    if (job.status !== 'active' && job.status !== 'expired') {
+      throw new Error('Job cannot be extended');
+    }
+
+    const newDeadline = new Date(extendJobDto.newDeadline);
+    if (newDeadline <= new Date()) {
+      throw new Error('New deadline must be in the future');
+    }
+
+    job.deadline = newDeadline;
+    job.status = 'active';
+    job.updatedAt = new Date();
+    
+    return this.jobRepository.save(job);
+  }
+
+  async renewJob(jobId: string): Promise<Job> {
+    const job = await this.jobRepository.findOne({
+      where: { id: jobId },
+      relations: ['employer'],
+    });
+
+    if (!job) {
+      throw new Error('Job not found');
+    }
+
+    const newDeadline = new Date();
+    newDeadline.setMonth(newDeadline.getMonth() + 1);
+
+    job.deadline = newDeadline;
+    job.status = 'active';
+    job.updatedAt = new Date();
+    
+    return this.jobRepository.save(job);
+  }
+
+  async sendExpiryNotification(job: Job): Promise<void> {
+    const daysUntilExpiry = Math.ceil(
+      (job.deadline.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    await this.mailerService.sendMail({
+      to: job.employer.email,
+      subject: `Job Posting "${job.title}" Expires Soon`,
+      template: 'job-expiry-notification',
+      context: {
+        jobTitle: job.title,
+        daysUntilExpiry,
+        jobId: job.id,
+        renewUrl: `${process.env.FRONTEND_URL}/jobs/${job.id}/renew`,
+      },
+    });
+  }
+
+  async processJobExpiry(): Promise<void> {
+    const expiredJobs = await this.findExpiredJobs();
+    
+    for (const job of expiredJobs) {
+      await this.expireJob(job.id);
+      this.logger.log(`Job ${job.id} expired`);
+    }
+  }
+
+  async sendExpiryNotifications(): Promise<void> {
+    const jobsExpiringSoon = await this.findJobsExpiringIn(3);
+    
+    for (const job of jobsExpiringSoon) {
+      await this.sendExpiryNotification(job);
+      this.logger.log(`Expiry notification sent for job ${job.id}`);
+    }
+  }
+
+  async findInactiveJobs(inactiveDays: number = 30): Promise<Job[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
+
+    return this.jobRepository.find({
+      where: {
+        status: 'active',
+        lastActivity: { $lt: cutoffDate },
+      },
+    });
+  }
+
+  async archiveInactiveJobs(): Promise<void> {
+    const inactiveJobs = await this.findInactiveJobs();
+    
+    for (const job of inactiveJobs) {
+      await this.archiveJob(job.id.toString());
+      this.logger.log(`Job ${job.id} archived due to inactivity`);
+    }
   }
 }

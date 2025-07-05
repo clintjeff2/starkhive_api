@@ -370,4 +370,53 @@ export class JobsController {
       user.id,
     );
   }
+
+
+    @Post(':id/extend')
+  async extendJob(
+    @Param('id') id: string,
+    @Body() extendJobDto: ExtendJobDto,
+  ) {
+    return this.jobsService.extendJob(id, extendJobDto);
+  }
+
+  @Post(':id/renew')
+  async renewJob(@Param('id') id: string) {
+    return this.jobsService.renewJob(id);
+  }
+
+  @Get('expiring')
+  async getExpiringJobs(@Query('days') days: string = '7') {
+    return this.jobsService.findJobsExpiringIn(parseInt(days));
+  }
+
+  @Get('expired')
+  async getExpiredJobs() {
+    return this.jobsService.findExpiredJobs();
+  }
+
+  @Post(':id/archive')
+  async archiveJob(@Param('id') id: string) {
+    return this.jobsService.archiveJob(id);
+  }
+
+  @Post('cleanup/expired')
+  async processExpiredJobs() {
+    await this.jobsService.processJobExpiry();
+    return { message: 'Expired jobs processed' };
+  }
+
+  @Post('cleanup/inactive')
+  async processInactiveJobs() {
+    await this.jobsService.archiveInactiveJobs();
+    return { message: 'Inactive jobs archived' };
+  }
 }
+function advancedSearch(arg0: any, query: any, SearchJobsDto: typeof SearchJobsDto) {
+  throw new Error('Function not implemented.');
+}
+
+function findAll() {
+  throw new Error('Function not implemented.');
+}
+
