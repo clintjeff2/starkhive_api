@@ -352,4 +352,5 @@ export class Job {
   @Exclude()
   @ExcludeFromQuery()
   deletedAt?: Date;
+  employer: any;
 }

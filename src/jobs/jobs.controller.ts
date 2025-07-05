@@ -47,6 +47,9 @@ import {
 import { JobTemplate } from './entities/job-template.entity';
 import { AuthGuardGuard } from '../auth/guards/auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ExtendJobDto } from './dto/extend-job.dto';
+
+
 
 // Extend Express Request with user property
 interface RequestWithUser extends ExpressRequest {
@@ -68,7 +71,6 @@ export class JobsController {
   @UseGuards(AuthGuardGuard)
   createJob(@Body() createJobDto: CreateJobDto, @GetUser() user: User) {
     return this.jobsService.createJob(createJobDto, user.id);
-  }
 
   @Get()
   findAll() {
@@ -271,7 +273,6 @@ export class JobsController {
   @Get('tx/:txHash/status')
   async getTransactionStatus(@Param('txHash') txHash: string) {
     return this.blockchainService.trackTransactionStatus(txHash);
-  }
 }
 
   @Patch('recommendations/:id/action')
@@ -291,7 +292,7 @@ export class JobsController {
   @Post('templates')
   async createTemplate(
     @Body() createTemplateDto: CreateTemplateDto,
-    @Request() req,
+    @new Request() req,
   ): Promise<JobTemplate> {
     // Assuming user info is available in request after authentication
     const userId =
@@ -307,7 +308,7 @@ export class JobsController {
     @Query('category') category?: string,
     @Query('tags') tags?: string,
     @Query('includeShared') includeShared?: string,
-    @Request() req?,
+    @new Request() req?,
   ): Promise<JobTemplate[]> {
     const userId = req.user?.id || req.user?.email;
     const tagsArray = tags
@@ -324,19 +325,19 @@ export class JobsController {
   }
 
   @Get('templates/categories')
-  async getTemplateCategories(@Request() req): Promise<string[]> {
+  async getTemplateCategories(@new Request() req): Promise<string[]> {
     const userId = req.user?.id || req.user?.email;
     return this.jobsService.getTemplateCategories(userId);
   }
 
   @Get('templates/tags')
-  async getTemplateTags(@Request() req): Promise<string[]> {
+  async getTemplateTags(@new Request() req): Promise<string[]> {
     const userId = req.user?.id || req.user?.email;
     return this.jobsService.getTemplateTags(userId);
   }
 
   @Get('templates/stats')
-  async getTemplateStats(@Request() req): Promise<any> {
+  async getTemplateStats(@new Request() req): Promise<any> {
     const userId = req.user?.id || req.user?.email;
     return this.jobsService.getTemplateStats(userId);
   }
@@ -344,7 +345,7 @@ export class JobsController {
   @Get('templates/:id')
   async findTemplateById(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req,
+    @new Request() req,
   ): Promise<JobTemplate> {
     const userId = req.user?.id || req.user?.email;
     return this.jobsService.findTemplateById(id, userId);
@@ -354,7 +355,7 @@ export class JobsController {
   async updateTemplate(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTemplateDto: UpdateTemplateDto,
-    @Request() req,
+    @new Request() req,
   ): Promise<JobTemplate> {
     const userId = req.user?.id || req.user?.email;
     return this.jobsService.updateTemplate(id, updateTemplateDto, userId);
@@ -364,7 +365,7 @@ export class JobsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteTemplate(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req,
+    @new Request() req,
   ): Promise<void> {
     const userId = req.user?.id || req.user?.email;
     return this.jobsService.deleteTemplate(id, userId);
@@ -373,7 +374,7 @@ export class JobsController {
   @Post('templates/:id/share')
   async shareTemplate(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req,
+    @new Request() req,
   ): Promise<JobTemplate> {
     const userId = req.user?.id || req.user?.email;
     return this.jobsService.shareTemplate(id, userId);
@@ -382,7 +383,7 @@ export class JobsController {
   @Post('templates/:id/unshare')
   async unshareTemplate(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req,
+    @new Request() req,
   ): Promise<JobTemplate> {
     const userId = req.user?.id || req.user?.email;
     return this.jobsService.unshareTemplate(id, userId);
@@ -392,7 +393,7 @@ export class JobsController {
   async createJobFromTemplate(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() createJobFromTemplateDto: CreateJobFromTemplateDto,
-    @Request() req,
+    @new Request() req,
   ): Promise<Job> {
     const userId = req.user?.id || req.user?.email;
     return this.jobsService.createJobFromTemplate(
@@ -400,4 +401,53 @@ export class JobsController {
       userId,
     );
   }
+
+
+    @Post(':id/extend')
+  async extendJob(
+    @Param('id') id: string,
+    @Body() extendJobDto: ExtendJobDto,
+  ) {
+    return this.jobsService.extendJob(id, extendJobDto);
+  }
+
+  @Post(':id/renew')
+  async renewJob(@Param('id') id: string) {
+    return this.jobsService.renewJob(id);
+  }
+
+  @Get('expiring')
+  async getExpiringJobs(@Query('days') days: string = '7') {
+    return this.jobsService.findJobsExpiringIn(parseInt(days));
+  }
+
+  @Get('expired')
+  async getExpiredJobs() {
+    return this.jobsService.findExpiredJobs();
+  }
+
+  @Post(':id/archive')
+  async archiveJob(@Param('id') id: string) {
+    return this.jobsService.archiveJob(id);
+  }
+
+  @Post('cleanup/expired')
+  async processExpiredJobs() {
+    await this.jobsService.processJobExpiry();
+    return { message: 'Expired jobs processed' };
+  }
+
+  @Post('cleanup/inactive')
+  async processInactiveJobs() {
+    await this.jobsService.archiveInactiveJobs();
+    return { message: 'Inactive jobs archived' };
+  }
 }
+function advancedSearch(arg0: any, query: any, SearchJobsDto: typeof SearchJobsDto) {
+  throw new Error('Function not implemented.');
+}
+
+function findAll() {
+  throw new Error('Function not implemented.');
+}
+

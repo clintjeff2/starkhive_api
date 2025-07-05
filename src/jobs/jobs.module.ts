@@ -14,6 +14,13 @@ import { Recommendation } from './entities/recommendation.entity';
 import { ExcludeSoftDeleteInterceptor } from 'src/common/interceptors/exclude-soft-delete.interceptor';
 import { BlockchainService } from './blockchain/blockchain.service';
 import { JobTemplate } from './entities/job-template.entity';
+import { ScheduleModule } from '@nestjs/schedule';
+import { JobCleanupTask } from './tasks/job-cleanup.task';
+
+@Module({
+  imports: [ScheduleModule.forRoot()],
+  providers: [JobCleanupTask],
+})
 
 @Module({
   imports: [
@@ -25,6 +32,7 @@ import { JobTemplate } from './entities/job-template.entity';
   ],
   providers: [
     JobsService,
+    JobCleanupTask,
     RecommendationService,
     {
       provide: APP_INTERCEPTOR,
