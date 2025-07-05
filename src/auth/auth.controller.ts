@@ -12,15 +12,15 @@ import {
   Param,
   Patch,
   Delete,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register-user.dto';
 import { User } from './entities/user.entity';
 import { FeedService } from '../feed/feed.service';
 import { JobsService } from '../jobs/jobs.service';
-// import { LoginDto } from './dto/login-user.dto';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
-
 import {
   ApiTags,
   ApiOperation,
@@ -33,7 +33,7 @@ import {
 import { Roles } from './decorators/role.decorator';
 import { UserRole } from './enums/userRole.enum';
 import { RolesGuard } from './guards/role.guard';
-import { AuthGuardGuard } from './guards/auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -41,6 +41,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { LogInDto } from './dto/loginDto';
 import { LogInProvider } from './providers/loginProvider';
 import { AdminGuard } from './admin.guard';
+import { RefreshTokenDto } from '@app/auth/dto/refresh-token.dto';
+import { Public } from '@app/auth/decorators/public.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -83,32 +85,65 @@ export class AuthController {
 
 
   
- 
- 
   @Post('login')
-  @ApiOperation({ summary: 'Login with email and password' })
-  
-  @Roles(UserRole.ADMIN)
-  @UseGuards(AuthGuardGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Login successful, JWT returned' })
-  @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
-  @ApiBadRequestResponse({ description: 'Validation failed' })
+  @ApiOperation({ summary: 'User login' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully logged in',
+    schema: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string' },
+        refreshToken: { type: 'string' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
   async login(@Body() loginDto: LogInDto) {
-    const token = await this.logInProvider.Login(loginDto);
-    return { access_token: token };
+    return this.authService.login(loginDto);
+  }
+
+  @Public()
+  @Post('refresh-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully refreshed token',
+    schema: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string' },
+        refreshToken: { type: 'string' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Invalid refresh token' })
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    try {
+      const tokens = await this.authService.refreshTokens(refreshTokenDto.refreshToken);
+      return {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 
   @Post('request-password-reset')
-async requestPasswordReset(@Body('email') email: string) {
-  return this.authService.sendPasswordResetEmail(email);
-}
-
+  @ApiOperation({ summary: 'Request password reset' })
+  @ApiResponse({ status: 200, description: 'Password reset email sent' })
+  async requestPasswordReset(@Body('email') email: string) {
+    return this.authService.sendPasswordResetEmail(email);
+  }
 
   @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password with token' })
+  @ApiResponse({ status: 200, description: 'Password successfully reset' })
+  @ApiBadRequestResponse({ description: 'Invalid or expired token' })
   async resetPassword(@Body() body: { token: string; newPassword: string }) {
     return this.authService.resetPassword(body.token, body.newPassword);
   }
-
-
 }

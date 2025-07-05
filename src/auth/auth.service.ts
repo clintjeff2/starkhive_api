@@ -9,13 +9,14 @@ import { RegisterDto } from './dto/register-user.dto';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
-import { addMinutes } from 'date-fns';
+import { addDays, addMinutes } from 'date-fns';
 import { PasswordReset } from './entities/password-reset.entity';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
 import { HashingProvider } from './providers/hashingProvider';
 import { LogInDto } from './dto/loginDto';
 import { LogInProvider } from './providers/loginProvider';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -83,18 +84,96 @@ export class AuthService {
   
     
 
-  async login(loginDto: LogInDto): Promise<string> {
+  async validateUser(email: string, password: string): Promise<Omit<User, 'password'> | null> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (user && await bcrypt.compare(password, user.password)) {
+      const { password, ...result } = user;
+      return result;
+    }
+    return null;
+  }
+
+  async refreshTokens(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      const user = await this.userRepository.findOne({
+        where: { id: payload.sub },
+      });
+
+      if (!user || !user.refreshToken) {
+        throw new Error('Invalid refresh token');
+      }
+
+      const isRefreshTokenValid = await bcrypt.compare(
+        refreshToken,
+        user.refreshToken,
+      );
+
+      if (!isRefreshTokenValid) {
+        throw new Error('Refresh token is not valid');
+      }
+
+      const tokens = await this.getTokens(user.id, user.email);
+      await this.updateRefreshToken(user.id, tokens.refreshToken);
+      return tokens;
+    } catch (error) {
+      throw new Error('Invalid refresh token');
+    }
+  }
+
+  async validateUserById(userId: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { id: userId } });
+  }
+
+  async getTokens(userId: string, email: string) {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(
+        {
+          sub: userId,
+          email,
+        },
+        {
+          secret: this.configService.get<string>('JWT_SECRET'),
+          expiresIn: '15m',
+        },
+      ),
+      this.jwtService.signAsync(
+        {
+          sub: userId,
+          email,
+        },
+        {
+          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+          expiresIn: '7d',
+        },
+      ),
+    ]);
+
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async updateRefreshToken(userId: string, refreshToken: string) {
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    await this.userRepository.update(userId, {
+      refreshToken: hashedRefreshToken,
+    });
+  }
+
+  async login(loginDto: LogInDto): Promise<{ accessToken: string; refreshToken: string }> {
     const { email, password } = loginDto;
-    const user = await this.userRepository.findOneBy({ email: email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    const user = await this.validateUser(email, password);
+    if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role
-    };
-    return this.jwtService.sign(payload);
+    const tokens = await this.getTokens(user.id, user.email);
+    await this.updateRefreshToken(user.id, tokens.refreshToken);
+    return tokens;
   }
 
   public async sendPasswordResetEmail(email: string): Promise<void> {
