@@ -5,7 +5,7 @@ import { SavedPost } from './entities/savedpost.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { Post } from './entities/post.entity';
 import { Report } from './entities/report.entity';
-import { CreateFeedDto } from './dto/create-feed.dto';
+import { CreateFeedDto, CreateFeedPostDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
 import { Job } from "../jobs/entities/job.entity"
 import { NotificationsService } from 'src/notifications/notifications.service';
@@ -13,6 +13,8 @@ import { JobStatus } from './enums/job-status.enum';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { Comment } from './entities/comment.entity';
 import { User } from 'src/auth/entities/user.entity';
+import { PaginationParamsDto } from '../common/dto/pagination-params.dto';
+import { PaginatedResponseDto } from '../common/dto/pagination-response.dto';
 
 @Injectable()
 export class FeedService {
@@ -24,6 +26,14 @@ export class FeedService {
       content: dto.content,
       image: dto.image,
       user,
+    });
+    return await this.postRepository.save(post);
+  }
+
+  async create(createFeedPostDto: CreateFeedPostDto) {
+    const post = this.postRepository.create({
+      content: createFeedPostDto.content,
+      image: createFeedPostDto.imageUrl, // Using imageUrl to match the DTO
     });
     return await this.postRepository.save(post);
   }
@@ -148,13 +158,28 @@ export class FeedService {
 
     return await this.commentRepository.save(comment);
   }
-  // Optional CRUD methods - adjust as needed
-  create(createFeedDto: CreateFeedDto) {
-    return 'This action adds a new feed';
+
+  async getPaginatedPosts(
+    paginationParams: PaginationParamsDto,
+  ): Promise<PaginatedResponseDto<Post>> {
+    const { page, limit } = paginationParams;
+    const skip = (page - 1) * limit;
+
+    const [posts, total] = await this.postRepository.findAndCount({
+      relations: ['user', 'comments', 'comments.user'],
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    return new PaginatedResponseDto(posts, total, page, limit);
   }
 
-  findAll() {
-    return `This action returns all feed`;
+  async findAll() {
+    return this.postRepository.find({
+      relations: ['user', 'comments', 'comments.user'],
+      order: { createdAt: 'DESC' },
+    });
   }
 
   findOne(id: number) {
