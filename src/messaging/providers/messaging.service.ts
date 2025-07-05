@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from "@nestjs/common"
-import { Repository } from "typeorm"
-import { Inject } from "@nestjs/common"
-import { getRepositoryToken } from "@nestjs/typeorm"
-import { User } from "src/auth/entities/user.entity"
-import { Message } from "../entities/messaging.entity"
-import { SendMessageDto } from "../dto/send-message.dto"
-import { GetMessagesDto } from "../dto/get-messages.dto"
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Repository } from 'typeorm';
+import { Inject } from '@nestjs/common';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { User } from 'src/auth/entities/user.entity';
+import { Message } from '../entities/messaging.entity';
+import { SendMessageDto } from '../dto/send-message.dto';
+import { GetConversationDto } from '../dto/get-conversation.dto';
 
 @Injectable()
 export class MessagingService {
@@ -22,13 +22,18 @@ export class MessagingService {
    * @param messageDto The message data
    * @returns The created message
    */
-  async sendMessage(senderId: string, messageDto: SendMessageDto): Promise<Message> {
-    const { recipientId, content } = messageDto
+  async sendMessage(
+    senderId: string,
+    messageDto: SendMessageDto,
+  ): Promise<Message> {
+    const { recipientId, content } = messageDto;
 
     // Check if recipient exists
-    const recipient = await this.userRepository.findOne({ where: { id: recipientId } })
+    const recipient = await this.userRepository.findOne({
+      where: { id: recipientId },
+    });
     if (!recipient) {
-      throw new NotFoundException("Recipient not found")
+      throw new NotFoundException('Recipient not found');
     }
 
     // Create and save the message
@@ -37,24 +42,32 @@ export class MessagingService {
       senderId,
       recipientId,
       isRead: false,
-    })
+    });
 
-    return this.messageRepository.save(message)
+    return this.messageRepository.save(message);
   }
 
   /**
    * Get messages between the current user and another user
    * @param currentUserId The ID of the current user
-   * @param params Query parameters for pagination and filtering
-   * @returns Paginated messages
+   * @param params Query parameters for pagination, filtering, and sorting
+   * @returns Paginated messages with metadata
    */
-  async getConversation(currentUserId: string, params: GetMessagesDto) {
-    const { userId, page = 1, limit = 20 } = params
+  async getConversation(currentUserId: string, params: GetConversationDto) {
+    const {
+      userId,
+      page = 1,
+      limit = 20,
+      sortOrder = 'DESC',
+      autoMarkRead = false,
+    } = params;
 
     // Check if the other user exists
-    const otherUser = await this.userRepository.findOne({ where: { id: userId } })
+    const otherUser = await this.userRepository.findOne({
+      where: { id: userId },
+    });
     if (!otherUser) {
-      throw new NotFoundException("User not found")
+      throw new NotFoundException('User not found');
     }
 
     // Get messages between the two users
@@ -63,22 +76,46 @@ export class MessagingService {
         { senderId: currentUserId, recipientId: userId },
         { senderId: userId, recipientId: currentUserId },
       ],
-      order: { createdAt: "DESC" },
+      order: { createdAt: sortOrder },
       skip: (page - 1) * limit,
       take: limit,
-    })
+      relations: ['sender', 'recipient'],
+      select: {
+        sender: {
+          id: true,
+          email: true,
+        },
+        recipient: {
+          id: true,
+          email: true,
+        },
+      },
+    });
 
-    // Mark messages as read if the current user is the recipient
-    const unreadMessages = messages.filter((message) => message.recipientId === currentUserId && !message.isRead)
+    // Only mark messages as read if autoMarkRead is true
+    if (autoMarkRead) {
+      const unreadMessages = messages.filter(
+        (message) => message.recipientId === currentUserId && !message.isRead,
+      );
 
-    if (unreadMessages.length > 0) {
-      await Promise.all(
-        unreadMessages.map(async (message) => {
-          message.isRead = true
-          return this.messageRepository.save(message)
-        }),
-      )
+      if (unreadMessages.length > 0) {
+        await Promise.all(
+          unreadMessages.map(async (message) => {
+            message.isRead = true;
+            return this.messageRepository.save(message);
+          }),
+        );
+      }
     }
+
+    // Count unread messages for the current user
+    const unreadCount = messages.reduce(
+      (count, message) =>
+        message.recipientId === currentUserId && !message.isRead
+          ? count + 1
+          : count,
+      0,
+    );
 
     return {
       data: messages,
@@ -87,8 +124,14 @@ export class MessagingService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
+        unreadCount,
+        participant: {
+          id: otherUser.id,
+          email: otherUser.email,
+        },
+        sortOrder,
       },
-    }
+    };
   }
 
   /**
@@ -99,28 +142,33 @@ export class MessagingService {
   async getConversations(userId: string) {
     // Get all unique users the current user has exchanged messages with
     const query = this.messageRepository
-      .createQueryBuilder("message")
-      .select("CASE WHEN message.senderId = :userId THEN message.recipientId ELSE message.senderId END", "otherUserId")
-      .addSelect("MAX(message.createdAt)", "lastMessageAt")
-      .where("message.senderId = :userId OR message.recipientId = :userId", { userId })
-      .groupBy("otherUserId")
-      .orderBy("lastMessageAt", "DESC")
+      .createQueryBuilder('message')
+      .select(
+        'CASE WHEN message.senderId = :userId THEN message.recipientId ELSE message.senderId END',
+        'otherUserId',
+      )
+      .addSelect('MAX(message.createdAt)', 'lastMessageAt')
+      .where('message.senderId = :userId OR message.recipientId = :userId', {
+        userId,
+      })
+      .groupBy('otherUserId')
+      .orderBy('lastMessageAt', 'DESC');
 
-    const conversations = await query.getRawMany()
+    const conversations = await query.getRawMany();
 
     // Get the latest message and user details for each conversation
     const conversationsWithDetails = await Promise.all(
       conversations.map(async (conv) => {
-        const otherUserId = conv.otherUserId
+        const otherUserId = conv.otherUserId;
 
         // Get the other user's details
         const otherUser = await this.userRepository.findOne({
           where: { id: otherUserId },
-          select: ["id", "email", "role"], // Add any other fields you want to include
-        })
+          select: ['id', 'email', 'role'], // Add any other fields you want to include
+        });
 
         if (!otherUser) {
-          return null // Skip if user not found (might have been deleted)
+          return null; // Skip if user not found (might have been deleted)
         }
 
         // Get the latest message
@@ -129,8 +177,8 @@ export class MessagingService {
             { senderId: userId, recipientId: otherUserId },
             { senderId: otherUserId, recipientId: userId },
           ],
-          order: { createdAt: "DESC" },
-        })
+          order: { createdAt: 'DESC' },
+        });
 
         // Count unread messages
         const unreadCount = await this.messageRepository.count({
@@ -139,18 +187,18 @@ export class MessagingService {
             recipientId: userId,
             isRead: false,
           },
-        })
+        });
 
         return {
           user: otherUser,
           latestMessage,
           unreadCount,
-        }
+        };
       }),
-    )
+    );
 
     // Filter out any null values (from deleted users)
-    return conversationsWithDetails.filter(Boolean)
+    return conversationsWithDetails.filter(Boolean);
   }
 
   /**
@@ -167,8 +215,8 @@ export class MessagingService {
         isRead: false,
       },
       { isRead: true },
-    )
+    );
 
-    return { markedAsRead: result.affected || 0 }
+    return { markedAsRead: result.affected || 0 };
   }
 }
