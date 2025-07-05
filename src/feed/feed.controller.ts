@@ -13,9 +13,9 @@ import {
   Request,
 } from '@nestjs/common';
 import { FeedService } from './feed.service';
-import { CreateFeedDto, GetSavedPostsDto } from './dto/create-feed.dto';
+import { CreateFeedDto, CreateFeedPostDto, GetSavedPostsDto } from './dto/create-feed.dto';
 import { UpdateFeedDto } from './dto/update-feed.dto';
-import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.strategy';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { User } from 'src/auth/entities/user.entity';
@@ -23,6 +23,7 @@ import { Report } from './entities/report.entity';
 import { UserRole } from '../auth/enums/userRole.enum';
 import { RolesGuard } from '../auth/guards/role.guard';
 import { Roles } from '../auth/decorators/role.decorator';
+import { PaginationParamsDto } from '../common/dto/pagination-params.dto';
 
 interface AuthenticatedRequest extends Request {
   user: User;
@@ -87,12 +88,24 @@ export class FeedController {
   }
 
   @Post()
-  create(@Body() createFeedDto: CreateFeedDto) {
-    return this.feedService.create(createFeedDto);
+  @ApiOperation({ summary: 'Create a new feed post' })
+  @ApiResponse({ status: 201, description: 'The post has been successfully created.' })
+  @ApiResponse({ status: 400, description: 'Invalid input.' })
+  create(@Body() createFeedPostDto: CreateFeedPostDto) {
+    return this.feedService.create(createFeedPostDto);
   }
 
   @Get()
-  findAll() {
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of items per page (default: 10, max: 100)' })
+  @ApiResponse({ status: 200, description: 'Returns paginated feed posts' })
+  async getFeed(@Query() paginationParams: PaginationParamsDto) {
+    return this.feedService.getPaginatedPosts(paginationParams);
+  }
+
+  @Get('all')
+  @ApiResponse({ status: 200, description: 'Returns all feed posts (use with caution)' })
+  async findAll() {
     return this.feedService.findAll();
   }
 
