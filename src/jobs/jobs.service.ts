@@ -32,6 +32,8 @@ import { BlockchainService } from './blockchain/blockchain.service';
 import { CurrencyConversionService } from './services/currency-conversion.service';
 import { User } from '../auth/entities/user.entity';
 import { JobStatus } from 'src/feed/enums/job-status.enum';
+import { CreateEscrowDto } from './dto/initiate-payment.dto';
+import { ReleaseEscrowDto } from './dto/release-payment.dto';
 
 @Injectable()
 export class JobsService {
@@ -61,7 +63,102 @@ export class JobsService {
 
     private readonly blockchainService: BlockchainService,
     private readonly currencyConversionService: CurrencyConversionService,
+
+    @InjectRepository(Escrow)
+    private readonly escrowRepository: Repository<Escrow>,
+    private readonly blockchainService: BlockchainService,
   ) {}
+
+    async findAll(): Promise<Job[]> {
+    return this.jobRepository.find();
+  }
+
+  async findOne(id: string): Promise<Job> {
+    const job = await this.jobRepository.findOne({ where: { id } });
+    if (!job) throw new NotFoundException('Job not found');
+    return job;
+  }
+
+  async initiateEscrowPayment(dto: CreateEscrowDto): Promise<Escrow> {
+    const job = await this.jobRepository.findOne({ where: { id: dto.jobId } });
+    if (!job) throw new NotFoundException('Job not found');
+    if (job.escrowId)
+      throw new BadRequestException('Escrow already initiated for this job');
+
+    const recruiter = await this.userRepository.findOne({
+      where: { id: job.recruiterId },
+    });
+    if (!recruiter?.walletAddress)
+      throw new BadRequestException('Recruiter wallet address not found');
+
+    const balance = await this.blockchainService.getTokenBalance(
+      recruiter.walletAddress,
+      dto.currency,
+    );
+
+    if (balance < dto.amount)
+      throw new BadRequestException('Insufficient funds for escrow deposit');
+
+    await this.blockchainService.lockFunds(
+      recruiter.walletAddress,
+      dto.currency,
+      dto.amount,
+    );
+
+    const escrow = this.escrowRepository.create({
+      job,
+      freelancerId: dto.freelancerId,
+      amount: dto.amount,
+      currency: dto.currency,
+      status: 'LOCKED',
+      lockedAt: new Date(),
+    });
+
+    const savedEscrow = await this.escrowRepository.save(escrow);
+    job.escrowId = savedEscrow.id;
+    await this.jobRepository.save(job);
+    return savedEscrow;
+  }
+
+  async releaseEscrowPayment(dto: ReleaseEscrowDto): Promise<Escrow> {
+    const escrow = await this.escrowRepository.findOne({
+      where: { id: dto.escrowId },
+      relations: ['job'],
+    });
+
+    if (!escrow || escrow.status !== 'LOCKED')
+      throw new BadRequestException('Escrow not in a valid state for release');
+
+    const freelancer = await this.userRepository.findOne({
+      where: { id: escrow.freelancerId },
+    });
+
+    if (!freelancer?.walletAddress)
+      throw new BadRequestException('Freelancer wallet address missing');
+
+    await this.blockchainService.releaseFunds(
+      freelancer.walletAddress,
+      escrow.currency,
+      escrow.amount,
+    );
+
+    escrow.status = 'RELEASED';
+    escrow.releasedAt = new Date();
+    escrow.job.paymentReleased = true;
+    await this.jobRepository.save(escrow.job);
+    return this.escrowRepository.save(escrow);
+  }
+
+  async handleDispute(escrowId: string, reason: string): Promise<Escrow> {
+    const escrow = await this.escrowRepository.findOne({ where: { id: escrowId } });
+    if (!escrow) throw new NotFoundException('Escrow not found');
+
+    escrow.status = 'DISPUTED';
+    escrow.disputeReason = reason;
+    escrow.disputedAt = new Date();
+
+    return this.escrowRepository.save(escrow);
+  }
 
   async createJob(createJobDto: CreateJobDto): Promise<Job> {
     if (
