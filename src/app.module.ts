@@ -29,6 +29,7 @@ import { Backup } from './backup/entities/backup.entity';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { RateLimitGuard } from './auth/guards/rate-limit.guard';
+import { AvailabilityModule } from './availability/availability.module';
 
 dotenv.config();
 
@@ -90,6 +91,8 @@ dotenv.config();
         },
       ],
     }),
+
+    AvailabilityModule,
   ],
   providers: [
     {
