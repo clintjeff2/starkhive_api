@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Patch,
+  Param,
   Query,
   UseGuards,
   Request,
@@ -83,5 +85,31 @@ export class NotificationsController {
       page,
       limit,
     );
+  }
+
+  @Patch(':id/read')
+  @ApiOperation({ summary: 'Mark a single notification as read' })
+  @ApiResponse({ status: 200, description: 'Notification marked as read' })
+  @ApiResponse({ status: 404, description: 'Notification not found' })
+  async markOneAsRead(@Request() req: any, @Param('id') id: string) {
+    const userId = req.user.sub || req.user.id;
+    return this.notificationsService.markAsRead(id, userId);
+  }
+
+  @Patch(':id/unread')
+  @ApiOperation({ summary: 'Mark a single notification as unread' })
+  @ApiResponse({ status: 200, description: 'Notification marked as unread' })
+  @ApiResponse({ status: 404, description: 'Notification not found' })
+  async markOneAsUnread(@Request() req: any, @Param('id') id: string) {
+    const userId = req.user.sub || req.user.id;
+    return this.notificationsService.markAsUnread(id, userId);
+  }
+
+  @Patch('all/read')
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  @ApiResponse({ status: 200, description: 'All notifications marked as read' })
+  async markAllAsRead(@Request() req: any) {
+    const userId = req.user.sub || req.user.id;
+    return this.notificationsService.markAllAsRead(userId);
   }
 }
