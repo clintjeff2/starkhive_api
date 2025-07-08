@@ -60,6 +60,20 @@ export class JobsController {
     private readonly blockchainService: BlockchainService,
   ) {}
 
+  @Post('escrow/initiate')
+  async initiateEscrow(@Body() dto: InitiatePaymentDto) {
+    return this.jobsService.initiateEscrow(dto);
+  }
+
+  @Patch('escrow/release/:escrowId')
+  async releaseEscrow(@Param('escrowId') escrowId: string) {
+    return this.jobsService.releaseEscrow(escrowId);
+  }
+
+  @Patch('escrow/dispute/:escrowId')
+  async markEscrowAsDisputed(@Param('escrowId') escrowId: string) {
+    return this.jobsService.markEscrowAsDisputed(escrowId);
+  }
   @Post()
   @UseGuards(AuthGuardGuard)
   createJob(@Body() createJobDto: CreateJobDto, @GetUser() user: User) {
