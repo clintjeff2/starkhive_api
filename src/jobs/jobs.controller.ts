@@ -30,6 +30,8 @@ import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from 'src/auth/entities/user.entity';
 import { BlockchainService } from './blockchain/blockchain.service';
 import { PaymentRequestDto } from './dto/payment-request.dto';
+import { InitiatePaymentDto } from './dto/initiate-payment.dto';
+import { ExtendJobDto } from './dto/extend-job.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -385,12 +387,8 @@ export class JobsController {
     );
   }
 
-
-    @Post(':id/extend')
-  async extendJob(
-    @Param('id') id: string,
-    @Body() extendJobDto: ExtendJobDto,
-  ) {
+  @Post(':id/extend')
+  async extendJob(@Param('id') id: string, @Body() extendJobDto: ExtendJobDto) {
     return this.jobsService.extendJob(id, extendJobDto);
   }
 
@@ -426,11 +424,3 @@ export class JobsController {
     return { message: 'Inactive jobs archived' };
   }
 }
-function advancedSearch(arg0: any, query: any, SearchJobsDto: typeof SearchJobsDto) {
-  throw new Error('Function not implemented.');
-}
-
-function findAll() {
-  throw new Error('Function not implemented.');
-}
-
