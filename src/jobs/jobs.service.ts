@@ -43,6 +43,7 @@ import { CreateEscrowDto } from './dto/initiate-payment.dto';
 import { ReleaseEscrowDto } from './dto/release-payment.dto';
 import { ExtendJobDto } from './dto/extend-job.dto';
 import { JobAdapter } from './adapters/job.adapter';
+import { PaginationDto } from './dto/pagination.dto';
 
 @Injectable()
 export class JobsService {
@@ -77,8 +78,115 @@ export class JobsService {
     private readonly currencyConversionService: CurrencyConversionService,
   ) {}
 
-  async findAll(): Promise<Job[]> {
-    return this.jobRepository.find();
+  async findAll(
+    paginationDto?: PaginationDto,
+  ): Promise<PaginatedJobResponseDto> {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      search,
+      location,
+      company,
+      jobType,
+      experienceLevel,
+      salaryMin,
+      salaryMax,
+      isRemote,
+      isUrgent,
+      isFeatured,
+      skills,
+    } = paginationDto || {};
+
+    const skip = (page - 1) * limit;
+
+    const query = this.jobRepository.createQueryBuilder('job');
+
+    // Only show open/active jobs for public access
+    query.where('job.status IN (:...activeStatuses)', {
+      activeStatuses: [JobStatus.OPEN, JobStatus.ACTIVE],
+    });
+
+    // Only show jobs that are accepting applications
+    query.andWhere('job.isAcceptingApplications = :isAccepting', {
+      isAccepting: true,
+    });
+
+    // Apply filters
+    if (search) {
+      query.andWhere(
+        '(job.title ILIKE :search OR job.description ILIKE :search OR job.company ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    if (location) {
+      query.andWhere('job.location ILIKE :location', {
+        location: `%${location}%`,
+      });
+    }
+
+    if (company) {
+      query.andWhere('job.company ILIKE :company', {
+        company: `%${company}%`,
+      });
+    }
+
+    if (jobType) {
+      query.andWhere('job.jobType = :jobType', { jobType });
+    }
+
+    if (experienceLevel) {
+      query.andWhere('job.experienceLevel = :experienceLevel', {
+        experienceLevel,
+      });
+    }
+
+    if (salaryMin !== undefined) {
+      query.andWhere('job.salaryMax >= :salaryMin', { salaryMin });
+    }
+
+    if (salaryMax !== undefined) {
+      query.andWhere('job.salaryMin <= :salaryMax', { salaryMax });
+    }
+
+    if (isRemote !== undefined) {
+      query.andWhere('job.isRemote = :isRemote', { isRemote });
+    }
+
+    if (isUrgent !== undefined) {
+      query.andWhere('job.isUrgent = :isUrgent', { isUrgent });
+    }
+
+    if (isFeatured !== undefined) {
+      query.andWhere('job.isFeatured = :isFeatured', { isFeatured });
+    }
+
+    if (skills) {
+      // Split skills by comma and search for any of them
+      const skillsArray = skills.split(',').map((skill) => skill.trim());
+      query.andWhere('job.skills && :skills', { skills: skillsArray });
+    }
+
+    // Apply sorting - default to newest first (createdAt DESC)
+    const sortDirection = sortOrder.toUpperCase() as 'ASC' | 'DESC';
+    query.orderBy(`job.${sortBy}`, sortDirection);
+
+    // Apply pagination
+    query.skip(skip).take(limit);
+
+    const [jobs, total] = await query.getManyAndCount();
+
+    // Convert jobs using adapter to ensure proper response format
+    const convertedJobs = jobs.map((job) => JobAdapter.toJobPostingEntity(job));
+
+    return new PaginatedJobResponseDto(
+      convertedJobs as any,
+      total,
+      page,
+      limit,
+    );
   }
 
   async findOne(id: string): Promise<Job> {
