@@ -48,6 +48,7 @@ import {
 } from './dto/job-template.dto';
 import { JobTemplate } from './entities/job-template.entity';
 import { AuthGuardGuard } from '../auth/guards/auth.guard';
+import { PaginationDto } from './dto/pagination.dto';
 
 // For Express Request typing
 import { Request } from 'express';
@@ -87,8 +88,54 @@ export class JobsController {
   }
 
   @Get()
-  findAll() {
-    return this.jobsService.findAllJobs();
+  @ApiOperation({
+    summary: 'Get paginated list of job postings',
+    description:
+      'Retrieve a paginated list of active job postings with optional filtering. Newest jobs are displayed first by default. This is a public endpoint accessible without authentication.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Paginated list of job postings with filtering and sorting support',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              company: { type: 'string' },
+              location: { type: 'string' },
+              jobType: { type: 'string' },
+              experienceLevel: { type: 'string' },
+              salaryMin: { type: 'number' },
+              salaryMax: { type: 'number' },
+              skills: { type: 'array', items: { type: 'string' } },
+              isRemote: { type: 'boolean' },
+              isUrgent: { type: 'boolean' },
+              isFeatured: { type: 'boolean' },
+              viewCount: { type: 'number' },
+              applicationCount: { type: 'number' },
+              createdAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+        total: {
+          type: 'number',
+          description: 'Total number of jobs matching the criteria',
+        },
+        page: { type: 'number', description: 'Current page number' },
+        limit: { type: 'number', description: 'Number of items per page' },
+        totalPages: { type: 'number', description: 'Total number of pages' },
+      },
+    },
+  })
+  findAll(@Query() paginationDto: PaginationDto) {
+    return this.jobsService.findAll(paginationDto);
   }
 
   @Get('search')
